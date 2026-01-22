@@ -1,13 +1,25 @@
 [package]
-name = "fngr"
-version = "0.1.0"
+name = "fingr-server"
+version = "0.2.0"
 edition = "2024"
+
+[[bin]]
+name = "fingr-server"
+path = "src/fingr-server/main.rs"
 
 [dependencies]
 anyhow = "1.0.100"
 maplit = "1.0.2"
-sha2 = "0.10.9"
+rand = "0.9.2"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+sha = "1.0.3"
+sha-rs = "0.1.0"
+tinyrand = "0.5.0"
+tinyrand-std = "0.5.0"
+# sha2 = "0.10.9"
 tokio = { version = "1.49.0", features = ["full"] }
+toml = "0.9.8"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
 uuid = "1.19.0"
