@@ -66,28 +66,15 @@ impl Fingr {
         let listener = TcpListener::bind(&self.config.socket_path).await?;
         info!("listening on '{}'", &self.config.socket_path);
 
-        // make a mutex of the server state.
+        // make state of the server thread safe.
         let state = Arc::new(Mutex::new(self));
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
 
         let ow_state = state.clone();
         tokio::spawn(Self::offline_worker(ow_state, tx));
 
-        // let mut errors = vec![];
-        // let mut recents = Arc::new(Mutex::new(HashMap::new()));
-
-        // let cd_rect: Arc<Mutex<HashMap<IpAddr, Instant>>> = recents.clone();
-        // tokio::spawn(Self::cooldown_worker(cd_rect));
-
         info!("server started.");
         loop {
-            // if let Some(errors) = rx.recv().await {
-            //     error!("offline worker returned too many errors...");
-            //     for e in errors {
-            //         error!("{}", e);
-            //     }
-            // }
-
             match listener.accept().await {
                 Ok((stream, addr)) => {
                     info!(?addr, "connection...");
