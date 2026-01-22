@@ -314,6 +314,45 @@ impl UserList {
 
         Ok(uuid)
     }
+
+    pub async fn remove(&mut self, username: String, ulpath: &Path) -> Result<()> {
+
+
+        // let uuid = Uuid::from_bytes(rand::random());
+        // let hasher = Sha256::new();
+        // let hash = hasher.digest(uuid.as_bytes());
+
+        // let init_user = InitialUser {
+        //     username,
+        //     hash: hash.to_owned(),
+        // };
+
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(ulpath)
+            .await?;
+        let mut buffer = vec![];
+        file.read_to_end(&mut buffer).await?;
+        file.rewind().await?;
+        let mut users: Vec<InitialUser> = serde_json::from_slice(&buffer)?;
+
+        let users_clone = users.clone();
+        for (i, user) in users_clone.iter().enumerate() {
+            if user.username == username {
+                users.remove(i);    
+            }
+        }
+
+        let new = serde_json::to_string_pretty(&users)?;
+        file.set_len(0).await?;
+        file.write_all(new.as_bytes()).await?;
+        file.flush().await?;
+
+        self.0.remove(&username).ok_or(anyhow!("failed to remove user"))?;
+
+        Ok(())
+    }
 }
 
 impl Default for UserList {

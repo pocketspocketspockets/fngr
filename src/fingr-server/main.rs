@@ -339,8 +339,18 @@ impl Fingr {
         }
     }
 
-    async fn deregister(_state: Arc<Mutex<Self>>, _req: Request) -> Result<Response> {
-        todo!()
+    async fn deregister(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {
+        let username = match Self::check_key(&state, &req).await {
+            Ok(Ok(content)) => content,
+            Ok(Err(res)) => return Ok(res),
+            Err(e) => return Err(e),
+        };
+
+        let mut lock = state.lock().await;
+        let path = lock.config.users_list.clone();
+        lock.users.remove(username, &path).await?;
+
+        Ok(Response::from(networking::ResponseStatus::Ok, JSONResponse::OK("your account has been removed".to_owned())))
     }
 
     async fn lock(&self) -> Result<File> {
