@@ -3,7 +3,6 @@ use std::{
     fmt::Display,
     ops::{Deref, DerefMut},
     path::Path,
-    str::FromStr,
     time::Duration,
 };
 
