@@ -2,15 +2,46 @@
 
 An implementation of finger built for a more modern world than the original one
 
-this is very sloppily thrown together
-
 ## how it expects urls
 
 `/login?username=foo&key=bar`
 
 `/finger?user=username`
 
----
+## how it returns data
+
+it returns all request responses, including errors, as json.
+
+example of `/list`
+```json
+{
+  "List": [
+    {
+      "User": {
+        "username": "pockets",
+        "status": {
+          "online": true,
+          "text": "helloooo",
+          "since": 1023
+        }
+      }
+    },
+    {
+      "User": {
+        "username": "lal",
+        "status": {
+          "online": false,
+          "text": null,
+          "since": 1273
+        }
+      }
+    }
+  ]
+}
+```
+
+## features 
+
 supports `login`, `logoff`, `bump`, `finger`, `list`, `register`, `check`
 
 planned: `deregister`
