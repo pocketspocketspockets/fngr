@@ -1,1 +1,10 @@
-pockets,yourmom
+[
+  {
+    "username": "pockets",
+    "hash": "b535f173ce651cc6f7f88ebe15b59a812ec21535beed4a2667c1e43290073ce4"
+  },
+  {
+    "username": "lal",
+    "hash": "b703da24f0a827b69f93dbc9a4ed7fbc3be054832a3a5cf40a53db910ca57e7d"
+  }
+]
