@@ -316,17 +316,6 @@ impl UserList {
     }
 
     pub async fn remove(&mut self, username: String, ulpath: &Path) -> Result<()> {
-
-
-        // let uuid = Uuid::from_bytes(rand::random());
-        // let hasher = Sha256::new();
-        // let hash = hasher.digest(uuid.as_bytes());
-
-        // let init_user = InitialUser {
-        //     username,
-        //     hash: hash.to_owned(),
-        // };
-
         let mut file = OpenOptions::new()
             .read(true)
             .write(true)
@@ -340,7 +329,7 @@ impl UserList {
         let users_clone = users.clone();
         for (i, user) in users_clone.iter().enumerate() {
             if user.username == username {
-                users.remove(i);    
+                users.remove(i);
             }
         }
 
@@ -349,7 +338,9 @@ impl UserList {
         file.write_all(new.as_bytes()).await?;
         file.flush().await?;
 
-        self.0.remove(&username).ok_or(anyhow!("failed to remove user"))?;
+        self.0
+            .remove(&username)
+            .ok_or(anyhow!("failed to remove user"))?;
 
         Ok(())
     }

@@ -350,7 +350,10 @@ impl Fingr {
         let path = lock.config.users_list.clone();
         lock.users.remove(username, &path).await?;
 
-        Ok(Response::from(networking::ResponseStatus::Ok, JSONResponse::OK("your account has been removed".to_owned())))
+        Ok(Response::from(
+            networking::ResponseStatus::Ok,
+            JSONResponse::OK("your account has been removed".to_owned()),
+        ))
     }
 
     async fn lock(&self) -> Result<File> {
@@ -371,9 +374,8 @@ async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
     let finger = Fingr::init(Some(PathBuf::from("./finger.config"))).await?;
 
-     #[cfg(not(debug_assertions))]
+    #[cfg(not(debug_assertions))]
     let finger = Fingr::init(None).await?;
-    
+
     finger.run().await
 }
-
