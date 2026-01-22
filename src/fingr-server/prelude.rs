@@ -3,7 +3,7 @@ pub use tracing::{debug, error, info, subscriber, warn};
 
 /// Helper function to return an error if path is relative using `Path::is_relative`. The check is disabled in a debug binary.
 #[inline]
-pub fn is_relative(name: &str, p: &std::path::Path) -> Result<()> {
+pub fn is_relative(name: &str, _p: &std::path::Path) -> Result<()> {
     #[cfg(not(debug_assertions))]
     if p.is_relative() {
         return Err(anyhow!("{} path cannot be relative!", name));

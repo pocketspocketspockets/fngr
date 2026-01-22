@@ -1,11 +1,7 @@
-use crate::{Fingr, prelude::*};
+use crate::prelude::*;
 use anyhow::anyhow;
-use std::{collections::HashMap, str::FromStr, sync::Arc};
-use tokio::{
-    io::{AsyncBufRead, AsyncBufReadExt},
-    net::TcpStream,
-    sync::Mutex,
-};
+use std::str::FromStr;
+use tokio::io::{AsyncBufRead, AsyncBufReadExt};
 
 pub struct Request {
     pub action: Action,
@@ -13,7 +9,7 @@ pub struct Request {
     pub key: Option<String>,
     pub finger_user: Option<String>,
     pub status: Option<String>,
-    pub headers: HashMap<String, String>,
+    // pub headers: HashMap<String, String>,
 }
 
 impl Request {
@@ -61,7 +57,7 @@ impl Request {
             return Err(anyhow!("invalid action:"));
         }
 
-        let mut headers = HashMap::new();
+        // let mut headers = HashMap::new();
 
         loop {
             line_buffer.clear();
@@ -71,10 +67,10 @@ impl Request {
                 break;
             }
 
-            let mut comps = line_buffer.split(":");
-            let key = comps.next().ok_or(anyhow!("invalid header"))?;
-            let value = comps.next().ok_or(anyhow!("invalid header"))?.trim();
-            headers.insert(key.to_string(), value.to_string());
+            // let mut comps = line_buffer.split(":");
+            // let key = comps.next().ok_or(anyhow!("invalid header"))?;
+            // let value = comps.next().ok_or(anyhow!("invalid header"))?.trim();
+            // headers.insert(key.to_string(), value.to_string());
         }
 
         Ok(Request {
@@ -83,16 +79,9 @@ impl Request {
             key,
             finger_user: user,
             status,
-            headers,
+            // headers,
         })
     }
-
-    // pub async fn run(
-    //     &self,
-    //     state: Arc<Mutex<Fingr>>,
-    // ) {
-    //     todo!();
-    // }
 }
 
 pub enum Action {

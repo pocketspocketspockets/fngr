@@ -1,18 +1,10 @@
 [
   {
     "username": "pockets",
-    "uid": "c72ee74a-6057-401f-9906-c0b084116bf1"
+    "hash": "b535f173ce651cc6f7f88ebe15b59a812ec21535beed4a2667c1e43290073ce4"
   },
   {
-    "username": "xinerki",
-    "uid": "55cbd9d6-0a4c-4712-a03f-a0c33ff4a544"
-  },
-  {
-    "username": "avery",
-    "uid": "ca60f2c0-53ec-4562-b5f8-c4f4c5444d5e"
-  },
-  {
-    "username": "lol",
-    "uid": "1c4207a8-8eb4-ea7a-2203-be48fa3ddd9c"
+    "username": "lal",
+    "hash": "b703da24f0a827b69f93dbc9a4ed7fbc3be054832a3a5cf40a53db910ca57e7d"
   }
 ]

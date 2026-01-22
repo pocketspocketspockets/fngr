@@ -1,20 +1,44 @@
 use std::{
     collections::HashMap,
     fmt::Display,
-    ops::{Deref, DerefMut, Index},
+    ops::{Deref, DerefMut},
     path::Path,
+    str::FromStr,
     time::Duration,
 };
 
 use crate::{networking::JSONResponse, prelude::*};
 use serde::{Deserialize, Serialize};
-use tinyrand::{Rand, Seeded, StdRand};
-use tinyrand_std::ClockSeed;
+use sha_rs::{Sha, Sha256};
 use tokio::{
     fs::{File, OpenOptions},
     io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
     time::Instant,
 };
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub struct JSONStatus {
+    online: bool,
+    text: Option<String>,
+    since: u64,
+}
+
+impl Default for JSONStatus {
+    fn default() -> Self {
+        Status::default().into()
+    }
+}
+
+impl From<Status> for JSONStatus {
+    fn from(value: Status) -> Self {
+        Self {
+            online: value.online,
+            text: value.text,
+            since: value.since.elapsed().as_secs(),
+        }
+    }
+}
+
 use uuid::Uuid;
 
 pub struct UserList(HashMap<String, User>);
@@ -50,7 +74,7 @@ impl Display for User {
 
 pub struct User {
     username: String,
-    uuid: Uuid,
+    hash: String,
     status: Status,
     bumped: Option<Instant>,
     log: Vec<JSONResponse>,
@@ -60,8 +84,8 @@ impl Into<JSONResponse> for User {
     fn into(self) -> JSONResponse {
         JSONResponse::User {
             username: self.username.to_owned(),
-            online: self.status.online,
-            status: self.status.text.to_owned(),
+
+            status: self.status.into(),
         }
     }
 }
@@ -70,8 +94,8 @@ impl Into<JSONResponse> for &User {
     fn into(self) -> JSONResponse {
         JSONResponse::User {
             username: self.username.to_owned(),
-            online: self.status.online,
-            status: self.status.text.to_owned(),
+
+            status: self.status.clone().into(),
         }
     }
 }
@@ -80,8 +104,8 @@ impl Into<JSONResponse> for &mut User {
     fn into(self) -> JSONResponse {
         JSONResponse::User {
             username: self.username.to_owned(),
-            online: self.status.online,
-            status: self.status.text.to_owned(),
+
+            status: self.status.clone().into(),
         }
     }
 }
@@ -91,9 +115,9 @@ impl User {
         &self.username
     }
 
-    fn uuid(&self) -> Uuid {
-        self.uuid
-    }
+    // fn uuid(&self) -> Uuid {
+    //     self.uuid
+    // }
 
     pub fn status(&self) -> &Status {
         &self.status
@@ -125,7 +149,9 @@ impl User {
     }
 
     pub fn compare_key(&self, key: Uuid) -> bool {
-        key == self.uuid
+        let hasher = Sha256::new();
+        let hash = hasher.digest(key.as_bytes());
+        hash == self.hash
     }
 
     fn check_status(&mut self) {
@@ -160,7 +186,7 @@ impl User {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct InitialUser {
     username: String,
-    uid: String,
+    hash: String,
 }
 
 #[cfg(debug_assertions)]
@@ -168,7 +194,7 @@ impl Default for InitialUser {
     fn default() -> Self {
         Self {
             username: "pockets".to_owned(),
-            uid: "whaa".to_owned(),
+            hash: "whaa".to_owned(),
         }
     }
 }
@@ -182,22 +208,15 @@ pub struct Status {
 
 impl Display for Status {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(status) = &self.text {
-            write!(
-                f,
-                "'online': {}, 'since': '{}', status: '{}'",
-                self.online,
-                self.since.elapsed().as_secs(),
-                status
-            )
-        } else {
-            write!(
-                f,
-                "'online': {}, 'since': '{}'",
-                self.online,
-                self.since.elapsed().as_secs()
-            )
-        }
+        let s = JSONStatus {
+            online: self.online,
+            text: self.text.to_owned(),
+            since: self.since.elapsed().as_secs(),
+        };
+
+        let output = serde_json::to_string(&s).unwrap();
+
+        write!(f, "{}", output)
     }
 }
 
@@ -230,12 +249,12 @@ impl UserList {
                 user.username.to_owned(),
                 User {
                     username: user.username.clone(),
-                    uuid: match user.uid.parse() {
+                    hash: match user.hash.parse() {
                         Ok(uuid) => uuid,
                         Err(e) => {
                             return Err(anyhow!(
                                 "failed to parse uuid '{}' for user '{}': {e}",
-                                user.uid,
+                                user.hash,
                                 user.username
                             ));
                         }
@@ -258,9 +277,12 @@ impl UserList {
         }
 
         let uuid = Uuid::from_bytes(rand::random());
+        let hasher = Sha256::new();
+        let hash = hasher.digest(uuid.as_bytes());
+
         let init_user = InitialUser {
             username,
-            uid: uuid.to_string(),
+            hash: hash.to_owned(),
         };
 
         let mut file = OpenOptions::new()
@@ -284,7 +306,7 @@ impl UserList {
             init_user.username.to_owned(),
             User {
                 username: init_user.username,
-                uuid,
+                hash,
                 status: Status::default(),
                 bumped: None,
                 log: Vec::new(),

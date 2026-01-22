@@ -5,15 +5,14 @@ use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
 use super::status::ResponseStatus;
-use crate::{prelude::*, userlist::User};
+use crate::{prelude::*, userlist::JSONStatus};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub enum JSONResponse {
     Error(String),
     User {
         username: String,
-        online: bool,
-        status: Option<String>,
+        status: JSONStatus,
     },
     List(Vec<Self>),
     OK(String),

@@ -1,11 +1,4 @@
-use std::{
-    collections::HashMap,
-    net::IpAddr,
-    path::{Path, PathBuf},
-    process::exit,
-    sync::Arc,
-    time::Duration,
-};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 pub mod config;
 mod networking;
@@ -18,7 +11,7 @@ use prelude::*;
 use tokio::{
     fs::{File, OpenOptions},
     io::BufStream,
-    net::{TcpListener, unix::SocketAddr},
+    net::TcpListener,
     sync::{Mutex, mpsc::Sender},
     time::{Instant, sleep},
 };
@@ -26,12 +19,13 @@ use userlist::UserList;
 
 use crate::{
     networking::{JSONResponse, Request, Response},
-    userlist::Status,
+    userlist::{JSONStatus, Status},
 };
 
 // struct holds the state of the server
 struct Fingr {
     config: Config,
+    #[allow(unused)]
     lock: Option<File>,
     users: UserList,
 }
@@ -50,7 +44,7 @@ impl Fingr {
         })
     }
 
-    async fn offline_worker(state: Arc<Mutex<Self>>, tx: Sender<Vec<Error>>) -> ! {
+    async fn offline_worker(state: Arc<Mutex<Self>>, _tx: Sender<Vec<Error>>) -> ! {
         info!("starting offline worker");
         loop {
             sleep(Duration::from_secs(60)).await;
@@ -74,7 +68,7 @@ impl Fingr {
 
         // make a mutex of the server state.
         let state = Arc::new(Mutex::new(self));
-        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
 
         let ow_state = state.clone();
         tokio::spawn(Self::offline_worker(ow_state, tx));
@@ -187,7 +181,7 @@ impl Fingr {
         if status {
             Ok(Response::from(
                 networking::ResponseStatus::Ok,
-                networking::JSONResponse::OK("you are not logged on".to_owned()),
+                networking::JSONResponse::OK("you are now logged on".to_owned()),
             ))
         } else {
             Ok(Response::from(
@@ -206,6 +200,7 @@ impl Fingr {
                 let lock = state.lock().await;
                 if let Some(user) = lock.users.get(username) {
                     if user.compare_key(key.parse()?) {
+                        // user.
                         Ok(Ok(username.to_owned()))
                     } else {
                         Ok(Err(Response::from(
@@ -248,8 +243,7 @@ impl Fingr {
         } else {
             JSONResponse::User {
                 username: "anonymous".to_owned(),
-                online: false,
-                status: None,
+                status: JSONStatus::default(),
             }
         };
 
@@ -331,7 +325,7 @@ impl Fingr {
         }
 
         if let Some(username) = req.username {
-            let v = if let Some(auth_key) = &lock.config.auth_key {
+            let _v = if let Some(auth_key) = &lock.config.auth_key {
                 if let Some(key) = req.key {
                     key == *auth_key
                 } else {
@@ -358,7 +352,7 @@ impl Fingr {
         }
     }
 
-    async fn deregister(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {
+    async fn deregister(_state: Arc<Mutex<Self>>, _req: Request) -> Result<Response> {
         todo!()
     }
 
