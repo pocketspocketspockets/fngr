@@ -368,6 +368,12 @@ impl Fingr {
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     info!("loading fingr server resources...");
+    #[cfg(debug_assertions)]
     let finger = Fingr::init(Some(PathBuf::from("./finger.config"))).await?;
+
+     #[cfg(not(debug_assertions))]
+    let finger = Fingr::init(None).await?;
+    
     finger.run().await
 }
+
