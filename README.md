@@ -1,6 +1,6 @@
 # fngr
 
-An implementation of finger built for a more modern world than the original one
+A recreation of finger built for a more modern world than the original one
 
 ## how it expects urls
 
