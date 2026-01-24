@@ -1,10 +1,10 @@
-use crate::networking::{Request, Response};
-
 pub mod networking;
 pub mod prelude;
 pub mod userlist;
 
-use anyhow::Result;
+use self::prelude::*;
+use self::networking::{Request, Response};
+
 
 pub trait Fngr {
     type SelfLock;
