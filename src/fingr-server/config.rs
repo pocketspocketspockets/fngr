@@ -1,6 +1,7 @@
-use crate::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+
+use fingr::prelude::*;
+use serde::{Deserialize, Serialize};
 use tokio::{fs::File, io::AsyncReadExt};
 
 pub struct Config {
