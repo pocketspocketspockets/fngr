@@ -15,6 +15,10 @@ use tokio::{
     time::Instant,
 };
 
+use itertools::Itertools;
+
+use eff_wordlist::large::random_word;
+
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct JSONStatus {
     online: bool,
@@ -37,8 +41,6 @@ impl From<Status> for JSONStatus {
         }
     }
 }
-
-use uuid::Uuid;
 
 pub struct UserList(HashMap<String, User>);
 
@@ -114,10 +116,6 @@ impl User {
         &self.username
     }
 
-    // fn uuid(&self) -> Uuid {
-    //     self.uuid
-    // }
-
     pub fn status(&self) -> &Status {
         &self.status
     }
@@ -147,7 +145,7 @@ impl User {
         self.status.since.elapsed()
     }
 
-    pub fn compare_key(&self, key: Uuid) -> bool {
+    pub fn compare_key(&self, key: String) -> bool {
         let hasher = Sha256::new();
         let hash = hasher.digest(key.as_bytes());
         hash == self.hash
@@ -249,10 +247,10 @@ impl UserList {
                 User {
                     username: user.username.clone(),
                     hash: match user.hash.parse() {
-                        Ok(uuid) => uuid,
+                        Ok(hash) => hash,
                         Err(e) => {
                             return Err(anyhow!(
-                                "failed to parse uuid '{}' for user '{}': {e}",
+                                "failed to parse key '{}' for user '{}': {e}",
                                 user.hash,
                                 user.username
                             ));
@@ -270,14 +268,15 @@ impl UserList {
         Ok(fin)
     }
 
-    pub async fn register(&mut self, username: String, ulpath: &Path) -> Result<Uuid> {
+    pub async fn register(&mut self, username: String, ulpath: &Path) -> Result<String> {
         if self.contains_key(&username) {
             return Err(anyhow!("username already taken"));
         }
 
-        let uuid = Uuid::from_bytes(rand::random());
+        let key = (0..10).map(|_| random_word().to_owned());
+        let key = Itertools::intersperse(key, "-".to_owned()).collect::<String>();
         let hasher = Sha256::new();
-        let hash = hasher.digest(uuid.as_bytes());
+        let hash = hasher.digest(key.as_bytes());
 
         let init_user = InitialUser {
             username,
@@ -312,7 +311,7 @@ impl UserList {
             },
         );
 
-        Ok(uuid)
+        Ok(key)
     }
 
     pub async fn remove(&mut self, username: String, ulpath: &Path) -> Result<()> {
