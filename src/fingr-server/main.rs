@@ -325,11 +325,11 @@ impl Fingr {
                 true
             };
             let ulpath = lock.config.users_list.clone();
-            let uuid = lock.users.register(username, &ulpath).await?;
-            let uid = uuid.to_string();
+            let key = lock.users.register(username, &ulpath).await?;
+            let key = key.to_string();
             Ok(Response::from(
                 networking::ResponseStatus::Ok,
-                JSONResponse::OK(uid),
+                JSONResponse::OK(key),
             ))
         } else {
             Ok(Response::from(
