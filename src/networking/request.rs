@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use anyhow::anyhow;
-use std::{collections::HashMap, hash::Hash, str::FromStr};
+use std::{collections::HashMap, str::FromStr};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt};
 
 pub struct Request {
