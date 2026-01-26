@@ -39,12 +39,15 @@ impl Fngr for Server {
             let lock = state.lock().await;
             lock.users.get(&username).unwrap().into()
         } else {
-            JSONResponse::User { username: "anonymous".to_owned(), status: JSONStatus::default() }
+            JSONResponse::User {
+                username: "anonymous".to_owned(),
+                status: JSONStatus::default(),
+            }
         };
 
         let mut lock = state.lock().await;
-        if let Some(usern) = req.finger_user {
-            if let Some(user) = lock.users.get_mut(&usern) {
+        if let Some(usern) = req.params.get("user") {
+            if let Some(user) = lock.users.get_mut(usern) {
                 user.add_log(from_user);
                 Ok(Response::from(ResponseStatus::Ok, user))
             } else {
@@ -107,26 +110,31 @@ impl Fngr for Server {
             ));
         }
 
-        if let Some(username) = req.username {
+        if let Some(username) = req.params.get("username") {
             // check server config for registration key
             if let Some(auth_key) = &lock.config.auth_key {
                 // get the registration key provided by prospective user
-                if let Some(key) = req.key {
-                    if key != *auth_key {
+                if let Some(key) = req.params.get("key") {
+                    if *key != *auth_key {
                         // key is incorrect
-                        return Ok(Response::from(ResponseStatus::Unauth, "server registration key is invalid"))
+                        return Ok(Response::from(
+                            ResponseStatus::Unauth,
+                            "server registration key is invalid",
+                        ));
                     }
                 } else {
                     // key is required but not provided in request
                     return Ok(Response::from(
                         ResponseStatus::Unauth,
-                        JSONResponse::Error("registration key is required on this server".to_owned()),
+                        JSONResponse::Error(
+                            "registration key is required on this server".to_owned(),
+                        ),
                     ));
                 }
             }
 
             let ulpath = lock.config.users_list.clone();
-            let uuid = lock.users.register(username, &ulpath).await?;
+            let uuid = lock.users.register(username.to_owned(), &ulpath).await?;
             let uid = uuid.to_string();
             Ok(Response::from(ResponseStatus::Ok, JSONResponse::OK(uid)))
         } else {
@@ -198,14 +206,19 @@ impl Server {
                     tokio::spawn(async move {
                         let err = match Request::parse(&mut stream).await {
                             Ok(request) => {
-                                Self::run_request(pstate, request).await.write(&mut stream).await
-                            },
+                                Self::run_request(pstate, request)
+                                    .await
+                                    .write(&mut stream)
+                                    .await
+                            }
                             Err(e) => {
                                 error!("parse error: {}", e);
                                 Response::from(
                                     ResponseStatus::Bad,
-                                    JSONResponse::Error(format!("failed to parse request: {}", e))
-                                ).write(&mut stream).await
+                                    JSONResponse::Error(format!("failed to parse request: {}", e)),
+                                )
+                                .write(&mut stream)
+                                .await
                             }
                         };
 
@@ -236,7 +249,10 @@ impl Server {
 
         match r {
             Ok(r) => r,
-            Err(e) => Response::from(ResponseStatus::ServerError, JSONResponse::Error(e.to_string()))
+            Err(e) => Response::from(
+                ResponseStatus::ServerError,
+                JSONResponse::Error(e.to_string()),
+            ),
         }
     }
 
@@ -252,7 +268,11 @@ impl Server {
         if let Some(user) = lock.users.get_mut(&username) {
             user.set_status(Status {
                 online: status,
-                text: req.status.or(user.status().text.to_owned()),
+                text: req
+                    .params
+                    .get("status")
+                    .map(String::to_owned)
+                    .or(user.status().text.to_owned()),
                 since: Instant::now(),
             });
         } else {
@@ -275,19 +295,24 @@ impl Server {
         }
     }
 
-    async fn check_key(
-        state: &Arc<Mutex<Self>>,
-        req: &Request,
-    ) -> Result<String> {
+    async fn check_key(state: &Arc<Mutex<Self>>, req: &Request) -> Result<String> {
         let lock = state.lock().await;
-        let auth = req.auth.clone().ok_or(anyhow!("no authentication header"))?.parse()?;
-        let username = req.username.clone().ok_or(anyhow!("no username"))?;
-        let user = lock.users.get(&username).ok_or(anyhow!("user not found"))?;
+        let auth = req
+            .auth
+            .clone()
+            .ok_or(anyhow!("no authentication header"))?
+            .parse()?;
+        let username = req
+            .params
+            .get("username")
+            .clone()
+            .ok_or(anyhow!("no username"))?;
+        let user = lock.users.get(username).ok_or(anyhow!("user not found"))?;
         if !user.compare_key(auth) {
             return Err(anyhow!("invalid authentication"));
         }
 
-        Ok(username)
+        Ok(username.to_owned())
     }
 
     async fn login(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {

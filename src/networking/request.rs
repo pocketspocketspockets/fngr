@@ -1,15 +1,16 @@
 use crate::prelude::*;
 use anyhow::anyhow;
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, hash::Hash, str::FromStr};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt};
 
 pub struct Request {
     pub action: Action,
-    pub username: Option<String>,
-    pub key: Option<String>,
+    // pub username: Option<String>,
+    // pub key: Option<String>,
     pub auth: Option<String>,
-    pub finger_user: Option<String>,
-    pub status: Option<String>,
+    // pub finger_user: Option<String>,
+    // pub status: Option<String>,
+    pub params: HashMap<String, String>,
     // pub headers: HashMap<String, String>,
 }
 
@@ -31,10 +32,12 @@ impl Request {
             .ok_or(anyhow!("missing path"))
             .map(Into::into)?;
         let action: Action;
-        let mut username = None;
-        let mut key = None;
-        let mut user = None;
-        let mut status = None;
+        // let mut username = None;
+        // let mut key = None;
+        // let mut user = None;
+        // let mut status = None;
+
+        let mut parammap = HashMap::new();
 
         if path.starts_with("/") {
             let s: Vec<&str> = path.split("?").collect();
@@ -45,13 +48,15 @@ impl Request {
                 for a in s.split("&") {
                     let b: Vec<&str> = a.split("=").collect();
 
-                    match b[0] {
-                        "username" => username = Some(b[1].to_owned()),
-                        "key" => key = Some(b[1].to_owned()),
-                        "user" => user = Some(b[1].to_owned()),
-                        "status" => status = Some(b[1].to_owned()),
-                        _ => {}
-                    }
+                    // match b[0] {
+                    //     "username" => username = Some(b[1].to_owned()),
+                    //     "key" => key = Some(b[1].to_owned()),
+                    //     "user" => user = Some(b[1].to_owned()),
+                    //     "status" => status = Some(b[1].to_owned()),
+                    //     _ => {}
+                    // }
+
+                    parammap.insert(b[0].to_owned(), b[1].to_owned());
                 }
             }
         } else {
@@ -76,11 +81,12 @@ impl Request {
 
         Ok(Request {
             action,
-            username,
+            // username,
             auth: headers.get("Authorization").map(|s| s.to_owned()),
-            key,
-            finger_user: user,
-            status,
+            params: parammap,
+            // key,
+            // finger_user: user,
+            // status,
             // headers,
         })
     }
