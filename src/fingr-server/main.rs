@@ -208,39 +208,21 @@ impl Server {
                     let pstate = state.clone();
 
                     tokio::spawn(async move {
-                        let r = match Request::parse(&mut stream).await {
-                            Ok(request) => match Self::run_request(pstate, request).await {
-                                Ok(response) => response.write(&mut stream).await,
-                                Err(e) => {
-                                    error!("{}", e);
-                                    Response::from(
-                                        ResponseStatus::ServerError,
-                                        JSONResponse::Error(e.to_string()),
-                                    )
-                                    .write(&mut stream)
-                                    .await
-                                }
+                        let err = match Request::parse(&mut stream).await {
+                            Ok(request) => {
+                                Self::run_request(pstate, request).await.write(&mut stream).await
                             },
                             Err(e) => {
-                                error!("{}", e);
+                                error!("parse error: {}", e);
                                 Response::from(
-                                    ResponseStatus::ServerError,
-                                    JSONResponse::Error(e.to_string()),
-                                )
-                                .write(&mut stream)
-                                .await
+                                    ResponseStatus::Bad,
+                                    JSONResponse::Error(format!("failed to parse request: {}", e))
+                                ).write(&mut stream).await
                             }
                         };
 
-                        if let Err(e) = r {
-                            error!("{}", e);
-                            Response::from(
-                                ResponseStatus::ServerError,
-                                JSONResponse::Error(e.to_string()),
-                            )
-                            .write(&mut stream)
-                            .await
-                            .unwrap();
+                        if let Err(e) = err {
+                            error!("server error {e}");
                         }
                     });
                 }
@@ -252,8 +234,8 @@ impl Server {
         }
     }
 
-    async fn run_request(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {
-        match req.action {
+    async fn run_request(state: Arc<Mutex<Self>>, req: Request) -> Response {
+        let r = match req.action {
             Action::Login => Self::login(state, req).await,
             Action::Logoff => Self::logoff(state, req).await,
             Action::Finger => Self::finger(state, req).await,
@@ -262,6 +244,11 @@ impl Server {
             Action::List => Self::list(state, req).await,
             Action::Register => Self::register(state, req).await,
             Action::Deregister => Self::deregister(state, req).await,
+        };
+
+        match r {
+            Ok(r) => r,
+            Err(e) => Response::from(ResponseStatus::ServerError, JSONResponse::Error(e.to_string()))
         }
     }
 
