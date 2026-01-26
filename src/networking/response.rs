@@ -36,7 +36,7 @@ impl Response {
         let bytes: Vec<u8> = data.to_string().bytes().collect();
 
         let headers = hashmap! {
-            "Content-Type".to_owned() => "text/html".to_string(),
+            "Content-Type".to_owned() => "application/json".to_string(),
             "Content-Length".to_owned() => bytes.len().to_string(),
         };
 
