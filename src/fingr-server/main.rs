@@ -35,14 +35,11 @@ impl Fngr for Server {
     }
 
     async fn finger(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {
-        let from_user: JSONResponse = if let Ok(Ok(fuser)) = Self::check_key(&state, &req).await {
+        let from_user: JSONResponse = if let Ok(username) = Self::check_key(&state, &req).await {
             let lock = state.lock().await;
-            lock.users.get(&fuser).unwrap().into()
+            lock.users.get(&username).unwrap().into()
         } else {
-            JSONResponse::User {
-                username: "anonymous".to_owned(),
-                status: JSONStatus::default(),
-            }
+            JSONResponse::User { username: "anonymous".to_owned(), status: JSONStatus::default() }
         };
 
         let mut lock = state.lock().await;
@@ -65,12 +62,7 @@ impl Fngr for Server {
     }
 
     async fn check(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {
-        let username = match Self::check_key(&state, &req).await {
-            Ok(Ok(content)) => content,
-            Ok(Err(res)) => return Ok(res),
-            Err(e) => return Err(e),
-        };
-
+        let username = Self::check_key(&state, &req).await?;
         let mut lock = state.lock().await;
         let log = lock.users.get_mut(&username).unwrap().log();
 
@@ -78,12 +70,7 @@ impl Fngr for Server {
     }
 
     async fn bump(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {
-        let username = match Self::check_key(&state, &req).await {
-            Ok(Ok(content)) => content,
-            Ok(Err(res)) => return Ok(res),
-            Err(e) => return Err(e),
-        };
-
+        let username = Self::check_key(&state, &req).await?;
         let mut lock = state.lock().await;
         let user = lock.users.get_mut(&username).unwrap();
         user.bump();
@@ -112,6 +99,7 @@ impl Fngr for Server {
     async fn register(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {
         let mut lock = state.lock().await;
 
+        // check server config if registration is allowed
         if !lock.config.registration {
             return Ok(Response::from(
                 ResponseStatus::Unauth,
@@ -120,18 +108,23 @@ impl Fngr for Server {
         }
 
         if let Some(username) = req.username {
-            let _v = if let Some(auth_key) = &lock.config.auth_key {
+            // check server config for registration key
+            if let Some(auth_key) = &lock.config.auth_key {
+                // get the registration key provided by prospective user
                 if let Some(key) = req.key {
-                    key == *auth_key
+                    if key != *auth_key {
+                        // key is incorrect
+                        return Ok(Response::from(ResponseStatus::Unauth, "server registration key is invalid"))
+                    }
                 } else {
+                    // key is required but not provided in request
                     return Ok(Response::from(
                         ResponseStatus::Unauth,
-                        JSONResponse::Error("incorrect registration key".to_owned()),
+                        JSONResponse::Error("registration key is required on this server".to_owned()),
                     ));
                 }
-            } else {
-                true
-            };
+            }
+
             let ulpath = lock.config.users_list.clone();
             let uuid = lock.users.register(username, &ulpath).await?;
             let uid = uuid.to_string();
@@ -145,12 +138,7 @@ impl Fngr for Server {
     }
 
     async fn deregister(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {
-        let username = match Self::check_key(&state, &req).await {
-            Ok(Ok(content)) => content,
-            Ok(Err(res)) => return Ok(res),
-            Err(e) => return Err(e),
-        };
-
+        let username = Self::check_key(&state, &req).await?;
         let mut lock = state.lock().await;
         let path = lock.config.users_list.clone();
         lock.users.remove(username, &path).await?;
@@ -257,11 +245,7 @@ impl Server {
         req: Request,
         status: bool,
     ) -> Result<Response> {
-        let username = match Self::check_key(&state, &req).await {
-            Ok(Ok(content)) => content,
-            Ok(Err(res)) => return Ok(res),
-            Err(e) => return Err(e),
-        };
+        let username = Self::check_key(&state, &req).await?;
 
         let mut lock = state.lock().await;
 
@@ -294,38 +278,16 @@ impl Server {
     async fn check_key(
         state: &Arc<Mutex<Self>>,
         req: &Request,
-    ) -> Result<std::result::Result<String, Response>> {
-        if let Some(username) = &req.username {
-            if let Some(key) = &req.key {
-                let lock = state.lock().await;
-                if let Some(user) = lock.users.get(username) {
-                    if user.compare_key(key.parse()?) {
-                        // user.
-                        Ok(Ok(username.to_owned()))
-                    } else {
-                        Ok(Err(Response::from(
-                            ResponseStatus::Unauth,
-                            JSONResponse::Error("invalid username or key".to_owned()),
-                        )))
-                    }
-                } else {
-                    Ok(Err(Response::from(
-                        ResponseStatus::NotFound,
-                        JSONResponse::Error("unknown username".to_owned()),
-                    )))
-                }
-            } else {
-                Ok(Err(Response::from(
-                    ResponseStatus::Bad,
-                    JSONResponse::Error("missing key".to_owned()),
-                )))
-            }
-        } else {
-            Ok(Err(Response::from(
-                ResponseStatus::Bad,
-                JSONResponse::Error("missing username".to_owned()),
-            )))
+    ) -> Result<String> {
+        let lock = state.lock().await;
+        let auth = req.auth.clone().ok_or(anyhow!("no authentication header"))?.parse()?;
+        let username = req.username.clone().ok_or(anyhow!("no username"))?;
+        let user = lock.users.get(&username).ok_or(anyhow!("user not found"))?;
+        if !user.compare_key(auth) {
+            return Err(anyhow!("invalid authentication"));
         }
+
+        Ok(username)
     }
 
     async fn login(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {

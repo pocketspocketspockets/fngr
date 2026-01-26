@@ -1,12 +1,13 @@
 use crate::prelude::*;
 use anyhow::anyhow;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt};
 
 pub struct Request {
     pub action: Action,
     pub username: Option<String>,
     pub key: Option<String>,
+    pub auth: Option<String>,
     pub finger_user: Option<String>,
     pub status: Option<String>,
     // pub headers: HashMap<String, String>,
@@ -57,7 +58,7 @@ impl Request {
             return Err(anyhow!("invalid action:"));
         }
 
-        // let mut headers = HashMap::new();
+        let mut headers = HashMap::new();
 
         loop {
             line_buffer.clear();
@@ -67,15 +68,16 @@ impl Request {
                 break;
             }
 
-            // let mut comps = line_buffer.split(":");
-            // let key = comps.next().ok_or(anyhow!("invalid header"))?;
-            // let value = comps.next().ok_or(anyhow!("invalid header"))?.trim();
-            // headers.insert(key.to_string(), value.to_string());
+            let mut comps = line_buffer.split(":");
+            let key = comps.next().ok_or(anyhow!("invalid header"))?;
+            let value = comps.next().ok_or(anyhow!("invalid header"))?.trim();
+            headers.insert(key.to_string(), value.to_string());
         }
 
         Ok(Request {
             action,
             username,
+            auth: headers.get("Authorization").map(|s| s.to_owned()),
             key,
             finger_user: user,
             status,
