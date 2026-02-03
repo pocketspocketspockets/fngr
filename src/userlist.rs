@@ -77,6 +77,9 @@ pub struct User {
     status: Status,
     bumped: Option<Instant>,
     log: Vec<JSONResponse>,
+    website: Option<String>,
+    social: HashMap<String, String>,
+    bio: Option<String>,
 }
 
 impl Into<JSONResponse> for User {
@@ -114,10 +117,6 @@ impl User {
         &self.username
     }
 
-    // fn uuid(&self) -> Uuid {
-    //     self.uuid
-    // }
-
     pub fn status(&self) -> &Status {
         &self.status
     }
@@ -147,7 +146,7 @@ impl User {
         self.status.since.elapsed()
     }
 
-    pub fn compare_key(&self, key: Uuid) -> bool {
+    pub fn compare_key(&self, key: String) -> bool {
         let hasher = Sha256::new();
         let hash = hasher.digest(key.as_bytes());
         hash == self.hash
@@ -186,14 +185,20 @@ impl User {
 struct InitialUser {
     username: String,
     hash: String,
+    website: Option<String>,
+    socials: HashMap<String, String>,
+    bio: Option<String>,
 }
 
 #[cfg(debug_assertions)]
 impl Default for InitialUser {
     fn default() -> Self {
         Self {
-            username: "pockets".to_owned(),
-            hash: "whaa".to_owned(),
+            username: "null".to_owned(),
+            hash: "nope".to_owned(),
+            website: None,
+            socials: HashMap::new(),
+            bio: None,
         }
     }
 }
@@ -233,15 +238,20 @@ impl UserList {
     pub async fn load(p: &Path) -> Result<Self> {
         info!("loading users from {}", p.display());
         is_relative("userlist", p)?;
-
-        let mut file = File::open(p).await?;
-
-        let mut buffer = vec![];
-        file.read_to_end(&mut buffer).await?;
-
-        let users: Vec<InitialUser> = serde_json::from_slice(&buffer)?;
-
         let mut fin = Self::default();
+        let mut users: Vec<InitialUser> = Vec::new();
+
+        if p.exists() {
+            let mut file = File::open(p).await?;
+            let mut buffer = vec![];
+            file.read_to_end(&mut buffer).await?;
+
+            if !buffer.is_empty() {
+                users = serde_json::from_slice(&buffer)?;
+            }
+        } else {
+            tokio::fs::File::create_new(p).await?;
+        }
 
         for user in users {
             fin.0.insert(
@@ -261,6 +271,9 @@ impl UserList {
                     status: Status::default(),
                     bumped: None,
                     log: Vec::new(),
+                    website: None,
+                    social: HashMap::new(),
+                    bio: None,
                 },
             );
         }
@@ -270,18 +283,32 @@ impl UserList {
         Ok(fin)
     }
 
-    pub async fn register(&mut self, username: String, ulpath: &Path) -> Result<Uuid> {
+    pub async fn register(
+        &mut self,
+        username: String,
+        ulpath: &Path,
+        password: Option<&String>,
+    ) -> Result<()> {
         if self.contains_key(&username) {
             return Err(anyhow!("username already taken"));
         }
 
-        let uuid = Uuid::from_bytes(rand::random());
+        let password = if let Some(p) = password {
+            p
+        } else {
+            return Err(anyhow!("a password is required"));
+        };
+
+        // let uuid = Uuid::from_bytes(rand::random());
         let hasher = Sha256::new();
-        let hash = hasher.digest(uuid.as_bytes());
+        let hash = hasher.digest(password.as_bytes());
 
         let init_user = InitialUser {
             username,
             hash: hash.to_owned(),
+            website: None,
+            socials: HashMap::new(),
+            bio: None,
         };
 
         let mut file = OpenOptions::new()
@@ -293,8 +320,16 @@ impl UserList {
         file.read_to_end(&mut buffer).await?;
         file.rewind().await?;
 
-        let mut users: Vec<InitialUser> = serde_json::from_slice(&buffer)?;
-        users.push(init_user.clone());
+        let users = 
+        if !buffer.trim_ascii().is_empty() {
+            let mut users: Vec<InitialUser> = serde_json::from_slice(&buffer)?;
+            users.push(init_user.clone());
+            users
+        } else {
+            let mut users = Vec::new();
+            users.push(init_user.clone());
+            users
+        };
 
         let new = serde_json::to_string_pretty(&users)?;
 
@@ -309,10 +344,13 @@ impl UserList {
                 status: Status::default(),
                 bumped: None,
                 log: Vec::new(),
+                website: init_user.website,
+                social: init_user.socials,
+                bio: init_user.bio,
             },
         );
 
-        Ok(uuid)
+        Ok(())
     }
 
     pub async fn remove(&mut self, username: String, ulpath: &Path) -> Result<()> {

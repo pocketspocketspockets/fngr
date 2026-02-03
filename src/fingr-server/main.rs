@@ -134,9 +134,14 @@ impl Fngr for Server {
             }
 
             let ulpath = lock.config.users_list.clone();
-            let uuid = lock.users.register(username.to_owned(), &ulpath).await?;
-            let uid = uuid.to_string();
-            Ok(Response::from(ResponseStatus::Ok, JSONResponse::OK(uid)))
+            lock.users
+                .register(username.to_owned(), &ulpath, req.params.get("password"))
+                .await?;
+            // let uid = uuid.to_string();
+            Ok(Response::from(
+                ResponseStatus::Ok,
+                JSONResponse::OK("account created".to_owned()),
+            ))
         } else {
             Ok(Response::from(
                 ResponseStatus::Bad,
@@ -300,8 +305,7 @@ impl Server {
         let auth = req
             .auth
             .clone()
-            .ok_or(anyhow!("no authentication header"))?
-            .parse()?;
+            .ok_or(anyhow!("no authentication header"))?;
         let username = req
             .params
             .get("username")
