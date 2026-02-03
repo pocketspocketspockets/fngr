@@ -38,8 +38,6 @@ impl From<Status> for JSONStatus {
     }
 }
 
-use uuid::Uuid;
-
 pub struct UserList(HashMap<String, User>);
 
 impl UserList {
@@ -178,6 +176,24 @@ impl User {
         let log = self.log.clone();
         self.log = Vec::new();
         log
+    }
+
+    pub fn set_website(&mut self, addr: String) {
+        self.website = Some(addr)
+    }
+
+    pub fn add_social(&mut self, name: String, s: String) {
+        self.social.insert(name, s);
+    }
+
+    pub fn remove_social(&mut self, name: String) {
+        if self.social.contains_key(&name) {
+            self.social.remove(&name);
+        }
+    }
+
+    pub fn set_bio(&mut self, bio: String) {
+        self.bio = Some(bio.replace("+", " "))
     }
 }
 
