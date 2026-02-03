@@ -19,7 +19,7 @@ use tokio::{
 struct Server {
     config: Config,
     #[allow(unused)]
-    lock: Option<File>,
+    // lock: Option<File>,
     users: UserList,
 }
 
@@ -167,12 +167,10 @@ impl Fngr for Server {
 impl Server {
     pub async fn init(config: Option<PathBuf>) -> Result<Self> {
         let config = Config::load(config).await?;
-        let lock = None;
         let users = UserList::load(&config.users_list).await?;
 
         Ok(Self {
             config,
-            lock,
             users,
         })
     }
