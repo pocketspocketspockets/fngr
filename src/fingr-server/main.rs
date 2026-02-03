@@ -276,7 +276,8 @@ impl Server {
                 text: req
                     .params
                     .get("status")
-                    .map(String::to_owned)
+                    .map(|s| s.replace("+", " "))
+                    // .map(String::to_owned)
                     .or(user.status().text.to_owned()),
                 since: Instant::now(),
             });
