@@ -46,6 +46,19 @@ impl UserList {
             user.check_status();
         }
     }
+
+    pub fn count(&self) -> (usize, usize) {
+        let mut online = 0;
+        let total = self.0.len();
+
+        for user in &self.0 {
+            if user.1.status.online {
+                online += 1;
+            }
+        }
+
+        (online, total)
+    }
 }
 
 impl Deref for UserList {
@@ -178,8 +191,8 @@ impl User {
         log
     }
 
-    pub fn set_website(&mut self, addr: String) {
-        self.website = Some(addr)
+    pub fn set_website(&mut self, addr: Option<String>) {
+        self.website = addr
     }
 
     pub fn add_social(&mut self, name: String, s: String) {
@@ -192,8 +205,8 @@ impl User {
         }
     }
 
-    pub fn set_bio(&mut self, bio: String) {
-        self.bio = Some(bio.replace("+", " "))
+    pub fn set_bio(&mut self, bio: Option<String>) {
+        self.bio = bio.map(|s| s.replace("+", " "));
     }
 }
 
@@ -336,8 +349,7 @@ impl UserList {
         file.read_to_end(&mut buffer).await?;
         file.rewind().await?;
 
-        let users = 
-        if !buffer.trim_ascii().is_empty() {
+        let users = if !buffer.trim_ascii().is_empty() {
             let mut users: Vec<InitialUser> = serde_json::from_slice(&buffer)?;
             users.push(init_user.clone());
             users

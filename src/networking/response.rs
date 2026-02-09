@@ -17,6 +17,13 @@ pub enum JSONResponse {
     List(Vec<Self>),
     OK(String),
     Log(Vec<String>),
+    Info {
+        name: String,
+        version: String,
+        licesnse: String,
+        contact: String,
+        users: (usize, usize),
+    },
 }
 
 impl Display for JSONResponse {

@@ -8,7 +8,6 @@ use fingr::{
 };
 use std::{path::PathBuf, sync::Arc, time::Duration};
 use tokio::{
-    fs::{File, OpenOptions},
     io::BufStream,
     net::TcpListener,
     sync::Mutex,
@@ -18,13 +17,24 @@ use tokio::{
 // struct holds the state of the server
 struct Server {
     config: Config,
-    #[allow(unused)]
-    // lock: Option<File>,
     users: UserList,
 }
 
 impl Fngr for Server {
     type SelfLock = Arc<Mutex<Self>>;
+
+    async fn info(state: Arc<Mutex<Self>>, _: Request) -> Result<Response> {
+        Ok(Response::from(
+            ResponseStatus::Ok,
+            JSONResponse::Info {
+                name: env!("CARGO_PKG_NAME").to_owned(),
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+                licesnse: env!("CARGO_PKG_LICENSE").to_owned(),
+                contact: env!("CARGO_PKG_AUTHORS").to_owned(),
+                users: state.lock().await.users.count(),
+            },
+        ))
+    }
 
     async fn login(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {
         Self::change_online_status(state, req, true).await
@@ -161,6 +171,56 @@ impl Fngr for Server {
             JSONResponse::OK("your account has been removed".to_owned()),
         ))
     }
+
+    async fn set_bio(state: Self::SelfLock, req: Request) -> Result<Response> {
+        let username = Self::check_key(&state, &req).await?;
+        let mut lock = state.lock().await;
+        if let Some(user) = lock.users.get_mut(&username) {
+            let bio = req.params.get("bio").map(Clone::clone);
+            user.set_bio(bio);
+        }
+
+        Ok(Response::from(ResponseStatus::Ok, JSONResponse::OK("Ok".to_owned())))
+    }
+
+    async fn add_social(state: Self::SelfLock, req: Request) -> Result<Response> {
+        let username = Self::check_key(&state, &req).await?;
+
+        if let (Some(name), Some(info)) = (req.params.get("name"), req.params.get("string")) {
+            let mut lock = state.lock().await;
+            let user = lock.users.get_mut(&username).unwrap();
+            user.add_social(name.to_owned(), info.to_owned());
+        }
+
+
+        Ok(Response::from(ResponseStatus::Ok, JSONResponse::OK("Ok".to_owned())))
+    }
+
+    async fn remove_social(state: Self::SelfLock, req: Request) -> Result<Response> {
+                let username = Self::check_key(&state, &req).await?;
+
+        if let Some(name) = req.params.get("name") {
+            let mut lock = state.lock().await;
+            let user = lock.users.get_mut(&username).unwrap();
+            user.remove_social(name.to_owned());
+        }
+
+
+        Ok(Response::from(ResponseStatus::Ok, JSONResponse::OK("Ok".to_owned())))
+    }
+
+    async fn set_website(state: Self::SelfLock, req: Request) -> Result<Response> {
+        let username = Self::check_key(&state, &req).await?;
+
+        // if let Some(address) = req.params.get("addr") {
+            let mut lock = state.lock().await;
+            let user = lock.users.get_mut(&username).unwrap();
+
+            user.set_website(req.params.get("addr").map(|s| s.to_owned()));
+        // }
+
+        Ok(Response::from(ResponseStatus::Ok, JSONResponse::OK("Ok".to_owned())))
+    }
 }
 
 // could make this a trait
@@ -169,10 +229,7 @@ impl Server {
         let config = Config::load(config).await?;
         let users = UserList::load(&config.users_list).await?;
 
-        Ok(Self {
-            config,
-            users,
-        })
+        Ok(Self { config, users })
     }
 
     async fn offline_worker(state: Arc<Mutex<Self>>) -> ! {
@@ -187,13 +244,11 @@ impl Server {
 
     pub async fn run(self) -> Result<()> {
         info!("starting finger server...");
-        self.lock().await?;
         let listener = TcpListener::bind(&self.config.socket_path).await?;
         info!("listening on '{}'", &self.config.socket_path);
 
         // make state of the server thread safe.
         let state = Arc::new(Mutex::new(self));
-        // let (tx, _rx) = tokio::sync::mpsc::channel(1);
 
         let ow_state = state.clone();
         tokio::spawn(Self::offline_worker(ow_state));
@@ -248,6 +303,11 @@ impl Server {
             Action::List => Self::list(state, req).await,
             Action::Register => Self::register(state, req).await,
             Action::Deregister => Self::deregister(state, req).await,
+            Action::Info => Self::info(state, req).await,
+            Action::SetBio => Self::set_bio(state, req).await,
+            Action::AddSocial => Self::add_social(state, req).await,
+            Action::DelSocial => Self::remove_social(state, req).await,
+            Action::SetWeb => Self::set_website(state, req).await,
         };
 
         match r {
@@ -324,16 +384,6 @@ impl Server {
 
     async fn logoff(state: Arc<Mutex<Self>>, req: Request) -> Result<Response> {
         Self::change_online_status(state, req, false).await
-    }
-
-    async fn lock(&self) -> Result<File> {
-        is_relative("lock", &self.config.lock)?;
-        info!("creating lock at {}", self.config.lock.display());
-        Ok(OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(&self.config.lock)
-            .await?)
     }
 }
 

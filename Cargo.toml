@@ -2,6 +2,8 @@
 name = "fingr"
 version = "0.3.0-alpha"
 edition = "2024"
+license = "GPL-3"
+authors = ["Avery Murray <pocketsbuzz@pm.me>"]
 
 [features]
 blocking = []

@@ -81,13 +81,8 @@ impl Request {
 
         Ok(Request {
             action,
-            // username,
             auth: headers.get("Authorization").map(|s| s.to_owned()),
             params: parammap,
-            // key,
-            // finger_user: user,
-            // status,
-            // headers,
         })
     }
 }
@@ -101,6 +96,11 @@ pub enum Action {
     List,
     Register,
     Deregister,
+    Info,
+    SetBio,
+    AddSocial,
+    DelSocial,
+    SetWeb,
 }
 
 impl FromStr for Action {
@@ -116,6 +116,11 @@ impl FromStr for Action {
             "deregister" => Ok(Self::Deregister),
             "logoff" => Ok(Self::Logoff),
             "check" => Ok(Self::Check),
+            "setbio" => Ok(Self::SetBio),
+            "addsocial" => Ok(Self::AddSocial),
+            "delsocial" => Ok(Self::DelSocial),
+            "setweb"  => Ok(Self::SetWeb),
+            "" | "info" => Ok(Self::Info),
             _ => Err(anyhow!("unrecognized action '{}'", s)),
         }
     }

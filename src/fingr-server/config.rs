@@ -9,7 +9,7 @@ pub struct Config {
     pub users_list: PathBuf,
     pub registration: bool,
     pub auth_key: Option<String>,
-    pub lock: PathBuf,
+    // pub lock: PathBuf,
     // file: File,
 }
 
@@ -29,8 +29,6 @@ impl Config {
         let socket_path = format!("{}:{}", init.address, init.port);
         let users_list = PathBuf::from(init.users_list);
         let auth_key = init.auth_key;
-        let lock = init.lock;
-        // let file = fs;
         let regis = init.registration;
 
         if auth_key.is_none() && regis {
@@ -41,7 +39,7 @@ impl Config {
             socket_path,
             users_list,
             auth_key,
-            lock: lock.unwrap_or(PathBuf::from("/var/finger.lock")),
+            // lock: lock.unwrap_or(PathBuf::from("/var/finger.lock")),
             // file,
             registration: regis,
         })
