@@ -3,7 +3,7 @@ name = "snuggle"
 description = "Simple federated social media inspired by finger"
 version = "0.3.0-alpha"
 edition = "2024"
-license = "GPL-3"
+license-file = "LICENSE"
 authors = ["Avery Murray <pocketsbuzz@pm.me>"]
 
 [features]
