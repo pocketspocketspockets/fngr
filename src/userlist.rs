@@ -98,6 +98,7 @@ impl Into<JSONResponse> for User {
     fn into(self) -> JSONResponse {
         JSONResponse::User {
             username: self.username(),
+            status: self.status.into(),
             website: self.website,
             socials: self.social,
             bio: self.bio,
@@ -109,6 +110,7 @@ impl Into<JSONResponse> for &User {
     fn into(self) -> JSONResponse {
         JSONResponse::User {
             username: self.username(),
+            status: self.status.clone().into(),
             website: self.website.clone(),
             socials: self.social.clone(),
             bio: self.bio.clone(),
@@ -120,6 +122,7 @@ impl Into<JSONResponse> for &mut User {
     fn into(self) -> JSONResponse {
         JSONResponse::User {
             username: self.username(),
+            status: self.status.clone().into(),
             website: self.website.clone(),
             socials: self.social.clone(),
             bio: self.bio.clone(),
@@ -275,7 +278,7 @@ impl Default for InitialUser {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Status {
     pub online: bool,
     pub text: Option<String>,
