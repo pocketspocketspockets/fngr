@@ -1,6 +1,6 @@
 # Snuggle
 
-Simple social media inspired by finger
+Simple federated social media inspired by finger
 
  ## Endpoints
 
