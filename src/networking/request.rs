@@ -65,7 +65,7 @@ impl Request {
             headers.insert(key.to_string(), value.to_string());
         }
 
-        let authorization = headers.remove("Authorization");
+        let authorization = headers.remove("Authorization").or(params.remove("auth"));
         let username = params.remove("username");
 
         Ok(Request {
