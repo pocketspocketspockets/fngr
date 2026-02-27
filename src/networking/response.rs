@@ -5,17 +5,19 @@ use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
 use super::status::ResponseStatus;
-use crate::{prelude::*, userlist::JSONStatus};
+use crate::prelude::*;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub enum JSONResponse {
     Error(String),
     User {
         username: String,
-        status: JSONStatus,
+        website: Option<String>,
+        socials: HashMap<String, String>,
+        bio: Option<String>,
     },
     List(Vec<Self>),
-    OK(String),
+    Ok(String),
     Log(Vec<String>),
     Info {
         name: String,
@@ -32,6 +34,7 @@ impl Display for JSONResponse {
     }
 }
 
+#[derive(Debug)]
 pub struct Response {
     status: ResponseStatus,
     headers: HashMap<String, String>,

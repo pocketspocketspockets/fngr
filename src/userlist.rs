@@ -84,6 +84,7 @@ impl Display for User {
 
 pub struct User {
     username: String,
+    server: String,
     hash: String,
     status: Status,
     bumped: Option<Instant>,
@@ -96,9 +97,10 @@ pub struct User {
 impl Into<JSONResponse> for User {
     fn into(self) -> JSONResponse {
         JSONResponse::User {
-            username: self.username.to_owned(),
-
-            status: self.status.into(),
+            username: self.username(),
+            website: self.website,
+            socials: self.social,
+            bio: self.bio,
         }
     }
 }
@@ -106,9 +108,10 @@ impl Into<JSONResponse> for User {
 impl Into<JSONResponse> for &User {
     fn into(self) -> JSONResponse {
         JSONResponse::User {
-            username: self.username.to_owned(),
-
-            status: self.status.clone().into(),
+            username: self.username(),
+            website: self.website.clone(),
+            socials: self.social.clone(),
+            bio: self.bio.clone(),
         }
     }
 }
@@ -116,16 +119,56 @@ impl Into<JSONResponse> for &User {
 impl Into<JSONResponse> for &mut User {
     fn into(self) -> JSONResponse {
         JSONResponse::User {
-            username: self.username.to_owned(),
+            username: self.username(),
+            website: self.website.clone(),
+            socials: self.social.clone(),
+            bio: self.bio.clone(),
+        }
+    }
+}
 
-            status: self.status.clone().into(),
+impl Into<InitialUser> for User {
+    fn into(self) -> InitialUser {
+        InitialUser {
+            username: self.username,
+            hash: self.hash,
+            website: self.website,
+            socials: self.social,
+            bio: self.bio,
+        }
+    }
+}
+
+impl Into<InitialUser> for &User {
+    fn into(self) -> InitialUser {
+        InitialUser {
+            username: self.username.to_owned(),
+            hash: self.hash.to_owned(),
+            website: self.website.to_owned(),
+            socials: self.social.to_owned(),
+            bio: self.bio.to_owned(),
+        }
+    }
+}
+
+impl Into<InitialUser> for &mut User {
+    fn into(self) -> InitialUser {
+        InitialUser {
+            username: self.username.to_owned(),
+            hash: self.hash.to_owned(),
+            website: self.website.to_owned(),
+            socials: self.social.to_owned(),
+            bio: self.bio.to_owned(),
         }
     }
 }
 
 impl User {
-    pub fn username(&self) -> &str {
-        &self.username
+    pub fn username(&self) -> String {
+        let mut username = self.username.clone();
+        username = username + "@";
+        username = username + &self.server;
+        username
     }
 
     pub fn status(&self) -> &Status {
@@ -210,8 +253,8 @@ impl User {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct InitialUser {
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
+pub(crate) struct InitialUser {
     username: String,
     hash: String,
     website: Option<String>,
@@ -264,7 +307,7 @@ impl Status {
 }
 
 impl UserList {
-    pub async fn load(p: &Path) -> Result<Self> {
+    pub async fn load(server: &str, p: &Path) -> Result<Self> {
         info!("loading users from {}", p.display());
         is_relative("userlist", p)?;
         let mut fin = Self::default();
@@ -287,6 +330,7 @@ impl UserList {
                 user.username.to_owned(),
                 User {
                     username: user.username.clone(),
+                    server: server.to_string(),
                     hash: match user.hash.parse() {
                         Ok(uuid) => uuid,
                         Err(e) => {
@@ -312,11 +356,39 @@ impl UserList {
         Ok(fin)
     }
 
+    async fn revert(&self) -> Vec<InitialUser> {
+        let mut v = Vec::new();
+
+        for (_, user) in &self.0 {
+            v.push(user.into());
+        }
+
+        v
+    }
+
+    pub async fn save(&mut self, ulpath: &Path) -> Result<()> {
+        let v = self.revert().await;
+
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(ulpath)
+            .await?;
+
+        let new = serde_json::to_string_pretty(&v)?;
+
+        file.write_all(new.as_bytes()).await?;
+        file.flush().await?;
+
+        Ok(())
+    }
+
     pub async fn register(
         &mut self,
         username: String,
         ulpath: &Path,
         password: Option<&String>,
+        server: String,
     ) -> Result<()> {
         if self.contains_key(&username) {
             return Err(anyhow!("username already taken"));
@@ -368,6 +440,7 @@ impl UserList {
             init_user.username.to_owned(),
             User {
                 username: init_user.username,
+                server: server,
                 hash,
                 status: Status::default(),
                 bumped: None,

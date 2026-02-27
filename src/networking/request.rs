@@ -3,41 +3,35 @@ use anyhow::anyhow;
 use std::{collections::HashMap, str::FromStr};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt};
 
+#[derive(Debug)]
 pub struct Request {
     pub action: Action,
-    // pub username: Option<String>,
-    // pub key: Option<String>,
-    pub auth: Option<String>,
-    // pub finger_user: Option<String>,
-    // pub status: Option<String>,
+    pub kind: RequestKind,
+    pub username: Option<String>,
+    pub headers: HashMap<String, String>,
     pub params: HashMap<String, String>,
-    // pub headers: HashMap<String, String>,
+    pub authorization: Option<String>,
 }
 
 impl Request {
-    pub async fn parse(mut stream: impl AsyncBufRead + Unpin) -> Result<Self> {
+    pub async fn parse_buf(mut stream: impl AsyncBufRead + Unpin) -> Result<Self> {
         let mut line_buffer = String::new();
         stream.read_line(&mut line_buffer).await?;
 
         let mut parts = line_buffer.split_whitespace();
 
-        let m = parts.next().ok_or(anyhow!("invalid request type"))?;
-
-        if m != "GET" {
-            return Err(anyhow!("invalid request type: '{}'", m));
-        }
+        let kind = parts
+            .next()
+            .ok_or(anyhow!("invalid request type"))?
+            .parse()?;
 
         let path: String = parts
             .next()
             .ok_or(anyhow!("missing path"))
             .map(Into::into)?;
         let action: Action;
-        // let mut username = None;
-        // let mut key = None;
-        // let mut user = None;
-        // let mut status = None;
 
-        let mut parammap = HashMap::new();
+        let mut params = HashMap::new();
 
         if path.starts_with("/") {
             let s: Vec<&str> = path.split("?").collect();
@@ -48,15 +42,7 @@ impl Request {
                 for a in s.split("&") {
                     let b: Vec<&str> = a.split("=").collect();
 
-                    // match b[0] {
-                    //     "username" => username = Some(b[1].to_owned()),
-                    //     "key" => key = Some(b[1].to_owned()),
-                    //     "user" => user = Some(b[1].to_owned()),
-                    //     "status" => status = Some(b[1].to_owned()),
-                    //     _ => {}
-                    // }
-
-                    parammap.insert(b[0].to_owned(), b[1].to_owned());
+                    params.insert(b[0].to_owned(), b[1].to_owned());
                 }
             }
         } else {
@@ -79,18 +65,66 @@ impl Request {
             headers.insert(key.to_string(), value.to_string());
         }
 
+        let authorization = headers.remove("Authorization");
+        let username = params.remove("username");
+
         Ok(Request {
             action,
-            auth: headers.get("Authorization").map(|s| s.to_owned()),
-            params: parammap,
+            kind,
+            username,
+            headers,
+            params,
+            // content: todo!(),
+            authorization,
         })
+    }
+
+    pub fn new(
+        action: Action,
+        kind: RequestKind,
+        username: Option<String>,
+        headers: HashMap<String, String>,
+        params: HashMap<String, String>,
+        authorization: Option<String>,
+    ) -> Self {
+        Self {
+            action,
+            kind,
+            username,
+            headers,
+            params,
+            authorization,
+        }
     }
 }
 
+#[derive(Debug)]
+pub enum RequestKind {
+    Get,
+    Post,
+    Delete,
+    Put,
+}
+
+impl FromStr for RequestKind {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "GET" => Ok(Self::Get),
+            "POST" => Ok(Self::Post),
+            "DELETE" => Ok(Self::Delete),
+            "PUT" => Ok(Self::Put),
+            _ => Err(anyhow!("unknown request type: '{}'", s)),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum Action {
     Login,
     Logoff,
-    Finger,
+    Snuggle,
     Check,
     Bump,
     List,
@@ -101,6 +135,8 @@ pub enum Action {
     AddSocial,
     DelSocial,
     SetWeb,
+    Fingerprint,
+    FedSnuggle,
 }
 
 impl FromStr for Action {
@@ -108,7 +144,7 @@ impl FromStr for Action {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "finger" => Ok(Self::Finger),
+            "snuggle" => Ok(Self::Snuggle),
             "login" => Ok(Self::Login),
             "bump" => Ok(Self::Bump),
             "list" => Ok(Self::List),
@@ -119,8 +155,10 @@ impl FromStr for Action {
             "setbio" => Ok(Self::SetBio),
             "addsocial" => Ok(Self::AddSocial),
             "delsocial" => Ok(Self::DelSocial),
-            "setweb"  => Ok(Self::SetWeb),
+            "setweb" => Ok(Self::SetWeb),
             "" | "info" => Ok(Self::Info),
+            "fed_snuggle" => Ok(Self::FedSnuggle),
+            "fingerprint" => Ok(Self::Fingerprint),
             _ => Err(anyhow!("unrecognized action '{}'", s)),
         }
     }

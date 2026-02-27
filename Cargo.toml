@@ -1,5 +1,5 @@
 [package]
-name = "fingr"
+name = "snuggle"
 version = "0.3.0-alpha"
 edition = "2024"
 license = "GPL-3"
@@ -9,13 +9,15 @@ authors = ["Avery Murray <pocketsbuzz@pm.me>"]
 blocking = []
 
 [[bin]]
-name = "fingr-server"
-path = "src/fingr-server/main.rs"
+name = "snuggle-server"
+path = "src/snuggle-server/main.rs"
 
 [dependencies]
 anyhow = "1.0.100"
+base64-url = "3.0.2"
 maplit = "1.0.2"
 rand = "0.9.2"
+reqwest = "0.13.2"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 sha-rs = "0.1.0"

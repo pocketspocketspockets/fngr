@@ -1,10 +1,12 @@
 use std::path::{Path, PathBuf};
 
-use fingr::prelude::*;
 use serde::{Deserialize, Serialize};
+use snuggle::prelude::*;
 use tokio::{fs::File, io::AsyncReadExt};
 
 pub struct Config {
+    pub server_name: String,
+    // pub address: String,
     pub socket_path: String,
     pub users_list: PathBuf,
     pub registration: bool,
@@ -26,7 +28,12 @@ impl Config {
 
         let (init, _) = InitialConfig::load(&p).await?;
 
-        let socket_path = format!("{}:{}", init.address, init.port);
+        let server_name = init.server_name.clone();
+        let socket_path = format!(
+            "{}:{}",
+            init.address.or(Some(server_name.clone())).unwrap(),
+            init.port
+        );
         let users_list = PathBuf::from(init.users_list);
         let auth_key = init.auth_key;
         let regis = init.registration;
@@ -36,11 +43,10 @@ impl Config {
         }
 
         Ok(Self {
+            server_name,
             socket_path,
             users_list,
             auth_key,
-            // lock: lock.unwrap_or(PathBuf::from("/var/finger.lock")),
-            // file,
             registration: regis,
         })
     }
@@ -48,7 +54,8 @@ impl Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct InitialConfig {
-    address: String,
+    server_name: String,
+    address: Option<String>,
     port: u16,
     users_list: String,
     registration: bool,
