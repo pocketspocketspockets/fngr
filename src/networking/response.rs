@@ -13,7 +13,7 @@ pub enum JSONResponse {
     /// `{ "error": String }``
     Error(String),
     /// `{ "user": { username: String, "status": { ... }, "website": String?, "socials": [ "foo": "https://bar.com" ], bio: String? } }``
-    /// 
+    ///
     /// for status see `snuggle::userlist::JSONStatus``
     User {
         username: String,
@@ -26,7 +26,7 @@ pub enum JSONResponse {
     List(Vec<Self>),
 
     /// Ok response with success information
-    /// 
+    ///
     /// `{ "ok": String }`
     Ok(String),
 

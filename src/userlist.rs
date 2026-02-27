@@ -18,9 +18,9 @@ use tokio::{
 /// JSON (De)seriaalizable object with user's status information
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct JSONStatus {
-    online: bool,
-    text: Option<String>,
-    since: u64,
+    pub online: bool,
+    pub text: Option<String>,
+    pub since: u64,
 }
 
 impl Default for JSONStatus {
@@ -40,7 +40,7 @@ impl From<Status> for JSONStatus {
 }
 
 /// # UserList
-/// 
+///
 /// struct containing a map of user accounts on the server.
 pub struct UserList(HashMap<String, User>);
 
@@ -89,7 +89,7 @@ impl Display for User {
 }
 
 /// # User
-/// 
+///
 /// This struct contains user information
 pub struct User {
     username: String,

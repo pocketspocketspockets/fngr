@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 /// Server status enum
-/// 
+///
 /// - NotFound 404
 /// - Ok 200
 /// - Unauth 401
