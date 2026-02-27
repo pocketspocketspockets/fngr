@@ -1,5 +1,12 @@
 use std::fmt::Display;
 
+/// Server status enum
+/// 
+/// - NotFound 404
+/// - Ok 200
+/// - Unauth 401
+/// - Bad 400
+/// - ServerError 500
 #[derive(Debug)]
 pub enum ResponseStatus {
     NotFound,

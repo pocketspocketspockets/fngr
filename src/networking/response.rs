@@ -5,11 +5,16 @@ use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
 use super::status::ResponseStatus;
-use crate::{prelude::*, userlist::{JSONStatus}};
+use crate::{prelude::*, userlist::JSONStatus};
 
+/// Server response JSON objects
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub enum JSONResponse {
+    /// `{ "error": String }``
     Error(String),
+    /// `{ "user": { username: String, "status": { ... }, "website": String?, "socials": [ "foo": "https://bar.com" ], bio: String? } }``
+    /// 
+    /// for status see `snuggle::userlist::JSONStatus``
     User {
         username: String,
         status: JSONStatus,
@@ -17,9 +22,18 @@ pub enum JSONResponse {
         socials: HashMap<String, String>,
         bio: Option<String>,
     },
+    /// List of other JSONReponses
     List(Vec<Self>),
+
+    /// Ok response with success information
+    /// 
+    /// `{ "ok": String }`
     Ok(String),
+
+    /// List for `log`
     Log(Vec<String>),
+
+    /// Server information
     Info {
         name: String,
         version: String,

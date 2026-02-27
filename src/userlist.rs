@@ -15,6 +15,7 @@ use tokio::{
     time::Instant,
 };
 
+/// JSON (De)seriaalizable object with user's status information
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct JSONStatus {
     online: bool,
@@ -38,15 +39,20 @@ impl From<Status> for JSONStatus {
     }
 }
 
+/// # UserList
+/// 
+/// struct containing a map of user accounts on the server.
 pub struct UserList(HashMap<String, User>);
 
 impl UserList {
+    /// Chceks all users and marks them offline after an hour without being bumped.
     pub fn check_statuses(&mut self) {
         for (_, user) in &mut self.0 {
             user.check_status();
         }
     }
 
+    /// Counts total users and online users: retuens (Online, Total)
     pub fn count(&self) -> (usize, usize) {
         let mut online = 0;
         let total = self.0.len();
@@ -82,6 +88,9 @@ impl Display for User {
     }
 }
 
+/// # User
+/// 
+/// This struct contains user information
 pub struct User {
     username: String,
     server: String,
@@ -167,6 +176,7 @@ impl Into<InitialUser> for &mut User {
 }
 
 impl User {
+    /// Returns the federated username of the user. `username@server_name.tld``
     pub fn username(&self) -> String {
         let mut username = self.username.clone();
         username = username + "@";
@@ -174,22 +184,27 @@ impl User {
         username
     }
 
+    /// Returns reference to the user's status
     pub fn status(&self) -> &Status {
         &self.status
     }
 
+    /// Set the status of the user
     pub fn set_status(&mut self, s: Status) {
         self.status = s;
     }
 
+    /// returns the online status of the user.  `true` for online `false` for offline.
     pub fn online(&self) -> bool {
         self.status.online
     }
 
+    /// returns `true` if the user has been bumped
     fn bumped(&self) -> bool {
         self.bumped.is_some()
     }
 
+    /// bumps the user to keep them marked as online
     pub fn bump(&mut self) -> bool {
         if self.online() {
             self.bumped = Some(Instant::now());
@@ -199,16 +214,19 @@ impl User {
         }
     }
 
+    /// returns duration since last logon/logoff
     fn time_since(&self) -> Duration {
         self.status.since.elapsed()
     }
 
+    /// verify user's authorization
     pub fn compare_key(&self, key: String) -> bool {
         let hasher = Sha256::new();
         let hash = hasher.digest(key.as_bytes());
         hash == self.hash
     }
 
+    /// marks the user offline if last login/bump was over an hour ago
     fn check_status(&mut self) {
         match (self.status.online, self.time_since().as_secs(), self.bumped) {
             (true, 3600.., None) => {
@@ -226,31 +244,37 @@ impl User {
         }
     }
 
+    /// add snuggling user to snuggled user's snuggle log
     pub fn add_log(&mut self, user: JSONResponse) {
         self.log.push(user);
         self.log.dedup();
     }
 
+    /// takes and return log list
     pub fn log(&mut self) -> Vec<JSONResponse> {
         let log = self.log.clone();
         self.log = Vec::new();
         log
     }
 
+    /// sets a website in user profile
     pub fn set_website(&mut self, addr: Option<String>) {
         self.website = addr
     }
 
+    /// adds a social link to user profile
     pub fn add_social(&mut self, name: String, s: String) {
         self.social.insert(name, s);
     }
 
+    /// removes a social link from user profile
     pub fn remove_social(&mut self, name: String) {
         if self.social.contains_key(&name) {
             self.social.remove(&name);
         }
     }
 
+    /// sets a bio to user profile
     pub fn set_bio(&mut self, bio: Option<String>) {
         self.bio = bio.map(|s| s.replace("+", " "));
     }
@@ -278,10 +302,14 @@ impl Default for InitialUser {
     }
 }
 
+/// User status
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Status {
+    /// `true` if online, `false` if offline
     pub online: bool,
+    /// Status text
     pub text: Option<String>,
+    /// Time since last logon/logoff
     pub since: Instant,
 }
 
@@ -310,7 +338,8 @@ impl Status {
 }
 
 impl UserList {
-    pub async fn load(server: &str, p: &Path) -> Result<Self> {
+    /// loads the userlist from `path`
+    pub async fn load(server_name: &str, p: &Path) -> Result<Self> {
         info!("loading users from {}", p.display());
         is_relative("userlist", p)?;
         let mut fin = Self::default();
@@ -333,7 +362,7 @@ impl UserList {
                 user.username.to_owned(),
                 User {
                     username: user.username.clone(),
-                    server: server.to_string(),
+                    server: server_name.to_string(),
                     hash: match user.hash.parse() {
                         Ok(uuid) => uuid,
                         Err(e) => {
@@ -359,6 +388,7 @@ impl UserList {
         Ok(fin)
     }
 
+    /// turns self into a vector of `InitialUser` to save user list to disk
     async fn revert(&self) -> Vec<InitialUser> {
         let mut v = Vec::new();
 
@@ -369,6 +399,7 @@ impl UserList {
         v
     }
 
+    /// write userlist to disk
     pub async fn save(&mut self, ulpath: &Path) -> Result<()> {
         let v = self.revert().await;
 
@@ -386,6 +417,7 @@ impl UserList {
         Ok(())
     }
 
+    /// add user to userlist and save to disk
     pub async fn register(
         &mut self,
         username: String,
@@ -457,6 +489,7 @@ impl UserList {
         Ok(())
     }
 
+    /// remove user from userlist and save to disk
     pub async fn remove(&mut self, username: String, ulpath: &Path) -> Result<()> {
         let mut file = OpenOptions::new()
             .read(true)

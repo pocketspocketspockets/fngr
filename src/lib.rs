@@ -2,12 +2,7 @@
 //! # Snuggle
 //!
 //! cozy, welcoming, decentralized, federated min-social network.
-//! 
-//! ##. Errors
-//! 
-//! ```
-//! { "Error": String }
-//! ```
+//!
 
 pub mod networking;
 pub mod prelude;
@@ -16,41 +11,82 @@ pub mod userlist;
 use self::networking::{Request, Response};
 use self::prelude::*;
 
+/// # Snuggle trait
+///
+/// Trait for defining the API for the Snuggle API.
+///
+/// ## Endpoints
+///
+/// client to server endpoints
+/// - `/info`
+/// - `/login`
+/// - `/logoff`
+/// - `/snuggle`
+/// - `/check`
+/// - `/bump`
+/// - `/list`
+/// - `/register`
+/// - `/deregister`
+/// - `/setbio`
+/// - `/addsocial`
+/// - `/delsocial`
+/// - `/setweb`
+///
+/// server to server endpoints
+/// - `/fed_snuggle`
+/// - `/fingerprint`
+///
+/// ## Response
+///
+/// Server can reply with
+/// - 200 on success
+/// - 404 on user isn't found
+/// - 400 on improperly formated request
+/// - 401 on unauthorized
+/// - 500 on server failure
+///
+/// All error responses are a JSON object
+///
+/// ```
+/// {
+///     "Error": String
+/// }
+/// ```
 pub trait Snuggle {
     type SelfLock;
 
     /// # Info
-    /// 
+    ///
     /// Returns server's information and API version.
-    /// 
+    ///
     /// ## Endpoint
-    /// 
+    ///
     /// - `/info`   required
     /// - `/`       optional
-    /// 
+    ///
     /// ## Heaader
-    /// 
+    ///
     /// No headers
-    /// 
+    ///
     /// ## Parameters
-    /// 
+    ///
     /// No Parameters
-    /// 
+    ///
     /// ## Response
-    /// 
+    ///
     /// - 200 on success
     /// - 500 on internal error
-    /// 
+    ///
     /// ### 200
-    /// 
+    ///
     /// Responds with Info JSON object.
-    /// 
+    ///
     /// - name: server software name
     /// - version: api version implemented by the server
     /// - license: license of the server software
     /// - contact: server maintainer contact information
     /// - users: array of two ints: online users, total users
-    /// 
+    ///
     /// ```
     /// {
     ///     "Info": {
@@ -65,34 +101,27 @@ pub trait Snuggle {
     fn info(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Login
-    /// 
+    ///
     /// Allows a user to login. User will be marked online and set offline automatically after 1 hours.
     /// Authorization requied.
-    /// 
+    ///
     /// ## Endpoint
-    /// 
+    ///
     /// - `/login` required
     ///
     /// ## Heaader
-    /// 
+    ///
     /// - `Authorization` with user's passphrase
-    /// 
+    ///
     /// ## Parameters
-    /// 
+    ///
     /// - `username` user's username
     /// - `auth` user's passphrase
-    /// 
+    ///
     ///  ## Response
-    /// 
-    /// Server can reply with
-    /// - 200 on success
-    /// - 404 on user isn't found
-    /// - 400 on improperly formated request
-    /// - 401 on unauthorized
-    /// - 500 on server failure
-    /// 
+    ///
     /// ### 200
-    /// 
+    ///
     /// ```
     /// {
     ///     "Ok": String
@@ -101,34 +130,34 @@ pub trait Snuggle {
     fn login(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Logoff
-    /// 
+    ///
     /// Allows a user to logiff. User will be marked offline.
     /// Authorization requied.
-    /// 
+    ///
     /// ## Endpoint
-    /// 
+    ///
     /// - `/logoff` required
     ///
     /// ## Heaader
-    /// 
+    ///
     /// - `Authorization` with user's passphrase
-    /// 
+    ///
     /// ## Parameters
-    /// 
+    ///
     /// - `username` user's username
     /// - `auth` user's passphrase
-    /// 
+    ///
     ///  ## Response
-    /// 
+    ///
     /// Server can reply with
     /// - 200 on success
     /// - 404 on user isn't found
     /// - 400 on improperly formated request
     /// - 401 on unauthorized
     /// - 500 on server failure
-    /// 
+    ///
     /// ### 200
-    /// 
+    ///
     /// ```
     /// {
     ///     "Ok": String
@@ -137,37 +166,37 @@ pub trait Snuggle {
     fn logoff(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Snuggle
-    /// 
+    ///
     /// Snuggle a user listed in `user` param. Returning that user's information and adding yourself to their log.
     /// Authorization required.
-    /// 
+    ///
     /// ## Endpoint
-    /// 
+    ///
     /// - `/snuggle` required
     ///
     /// ## Heaader
-    /// 
+    ///
     /// - `Authorization` with user's passphrase
-    /// 
+    ///
     /// ## Parameters
-    /// 
+    ///
     /// - `username` user's username
     /// - `auth` user's passphrase
     /// - `user` user to snuggle's username (`foo`` or `foo@exmaple.com`)
-    /// 
+    ///
     ///  ## Response
-    /// 
+    ///
     /// Server can reply with
     /// - 200 on success
     /// - 404 on user isn't found
     /// - 400 on improperly formated request
     /// - 401 on unauthorized
     /// - 500 on server failure
-    /// 
+    ///
     /// ### 200
-    /// 
+    ///
     /// Returns `User` json object
-    /// 
+    ///
     /// ```
     /// {
     ///   "User": {
@@ -233,7 +262,7 @@ pub trait Snuggle {
     ///
     /// Bump's a user to keep them online for longer than the standard hour.
     /// Authorization required.
-    /// 
+    ///
     /// ## Endpoints
     ///
     /// Must be avilable at `/bump`
@@ -361,25 +390,25 @@ pub trait Snuggle {
     fn deregister(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # set bio
-    /// 
+    ///
     /// Set or removes a user's biography / description
     /// no `bio` bio to `null`
     /// Authorization
-    /// 
+    ///
     /// ## Endpoint
-    /// 
+    ///
     /// - `/setbio` required.
-    /// 
+    ///
     /// ## Headers
-    /// 
+    ///
     /// - `Authorization` required with user's passphrase
-    /// 
+    ///
     /// ## Parameters
-    /// 
+    ///
     /// - `username` requried with user's username
     /// - `auth` required with user's passphrase
     /// - `bio` optional with a biography, spaces separated with `+`. Ombittion of this parameters sets bio to `null`.
-    /// 
+    ///
     /// ## Response
     ///
     /// Server can reply with
@@ -399,25 +428,25 @@ pub trait Snuggle {
     fn set_bio(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # add social
-    /// 
+    ///
     /// Adds a social link to a user's profile
     /// Authorization required.
-    /// 
+    ///
     /// ## Endpoint
-    /// 
+    ///
     /// - `/addsocial` required.
-    /// 
+    ///
     /// ## Headers
-    /// 
+    ///
     /// - `Authorization` with user's passphrase
-    /// 
+    ///
     /// ## Parameters
-    /// 
+    ///
     /// - `username` with user's username
     /// - `auth` with user's passphrase
     /// - `name` name of service.
     /// - `string` url of profile on service.
-    /// 
+    ///
     /// ## Response
     ///
     /// Server can reply with
@@ -437,24 +466,24 @@ pub trait Snuggle {
     fn add_social(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # remove social
-    /// 
+    ///
     /// Removes a social link from a user's profile
     /// Authorization required.
-    /// 
+    ///
     /// ## Endpoint
-    /// 
+    ///
     /// - `/delsocial` required.
-    /// 
+    ///
     /// ## Headers
-    /// 
+    ///
     /// - `Authorization` with user's passphrase
-    /// 
+    ///
     /// ## Parameters
-    /// 
+    ///
     /// - `username` with user's username
     /// - `auth` with user's passphrase
     /// - `name` name of service.
-    /// 
+    ///
     /// ## Response
     ///
     /// Server can reply with
@@ -475,24 +504,24 @@ pub trait Snuggle {
     -> impl Future<Output = Result<Response>>;
 
     /// # Set website
-    /// 
+    ///
     /// Adds or removes a website link to a user's profile.
     /// no addr removes the link.
     /// Authorization requied.
-    /// 
+    ///
     /// ## Endpoint
-    /// 
+    ///
     /// `/addsocial` is required.
-    /// 
+    ///
     /// ## Headers
-    /// 
+    ///
     /// - `Authorization` required with user's password
-    /// 
+    ///
     /// ## Parameters
-    /// 
+    ///
     /// - `username` requried with user's username
     /// - `addr` optional with URL. Obmittion sets website to `null`.
-    /// 
+    ///
     /// ## Response
     ///
     /// Server can reply with
@@ -512,15 +541,15 @@ pub trait Snuggle {
     fn set_website(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Federated Snuggle (federation)
-    /// 
+    ///
     /// Server-to-server endpoint for snuggling over federation.
-    /// 
+    ///
     /// ## Parameters
-    /// 
+    ///
     /// - `snuggle`: user to be snuggled
     /// - `by_user`: initiating user from original server
     /// - `base`: Uuid fingerprint generated by server for domain verification.
-    /// 
+    ///
     /// ## Response
     ///
     /// Server can reply with
@@ -531,19 +560,19 @@ pub trait Snuggle {
     /// - 500 on server failure
     ///
     /// ### 200
-    /// 
+    ///
     /// Responds with `User` object
     fn fed_snuggle(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Fingerprint (federation)
-    /// 
-    /// Server-to-server endpoint for snuggling over federation.
-    /// 
+    ///
+    /// Server-to-server endpoint for verifying snuggling over federation.
+    ///
     /// ## Parameters
-    /// 
+    ///
     /// - `user`: TODO
     /// - `base`: TODO
-    /// 
+    ///
     /// ## Response
     ///
     /// Server can reply with
@@ -554,7 +583,7 @@ pub trait Snuggle {
     /// - 500 on server failure
     ///
     /// ### 200
-    /// 
+    ///
     /// Responds with `User` object
     fn fingerprint(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 }
