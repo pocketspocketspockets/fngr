@@ -1,0 +1,10 @@
+[Unit]
+Description=Snuggle server
+Requires=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/bin/snuggle-server
+
+[Install]
+WantedBy=multi-user.target
