@@ -2,7 +2,12 @@
 //! # Snuggle
 //!
 //! cozy, welcoming, decentralized, federated min-social network.
-//!
+//! 
+//! ##. Errors
+//! 
+//! ```
+//! { "Error": String }
+//! ```
 
 pub mod networking;
 pub mod prelude;
@@ -15,204 +20,190 @@ pub trait Snuggle {
     type SelfLock;
 
     /// # Info
-    ///
-    /// endpoint for receiving server information.
-    ///
-    /// ## Endpoints
-    ///
-    /// - Must be available at `/info`
-    /// - Optionally available at `/`.
-    ///
-    /// ## Responses
-    ///
-    /// Server can reply with
-    ///
+    /// 
+    /// Returns server's information and API version.
+    /// 
+    /// ## Endpoint
+    /// 
+    /// - `/info`   required
+    /// - `/`       optional
+    /// 
+    /// ## Heaader
+    /// 
+    /// No headers
+    /// 
+    /// ## Parameters
+    /// 
+    /// No Parameters
+    /// 
+    /// ## Response
+    /// 
     /// - 200 on success
-    /// - 500 on server failure
-    ///
+    /// - 500 on internal error
+    /// 
     /// ### 200
-    ///
-    /// JSON object with Info object, containing
-    ///
-    /// - server name: `name` as a string
-    /// - server version: `version` as a string
-    /// - server license: `license` as a string
-    /// - server contact `contact` as a string
-    /// - server users `users` an array of two ints. `[Online users, total users]`
-    ///
-    /// ```json
+    /// 
+    /// Responds with Info JSON object.
+    /// 
+    /// - name: server software name
+    /// - version: api version implemented by the server
+    /// - license: license of the server software
+    /// - contact: server maintainer contact information
+    /// - users: array of two ints: online users, total users
+    /// 
+    /// ```
     /// {
     ///     "Info": {
-    ///         "name" : String,
-    ///         "version" : String,
-    ///         "licesnse" : String,
-    ///         "contact" : String,
-    ///         "users" : [Int,Int]
+    ///         "name": "snuggle",
+    ///         "version": "0.3.0-alpha",
+    ///         "licesnse": "GPL-3",
+    ///         "contact": "Avery Murray <pocketsbuzz@pm.me>",
+    ///         "users": [1,3]
     ///     }
     /// }
     /// ```
-    ///
-    /// ### 500
-    ///
-    /// ### 404, 400, 401, 500
-    ///
-    /// ```
-    /// {
-    ///     "Error": String
-    /// }
-    /// ```
-    ///
     fn info(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Login
+    /// 
+    /// Allows a user to login. User will be marked online and set offline automatically after 1 hours.
+    /// Authorization requied.
+    /// 
+    /// ## Endpoint
+    /// 
+    /// - `/login` required
     ///
-    /// Login user, setting them online and an optional status.
-    /// Users must be set offline automatically after 1 hour.
-    ///
-    /// ## Endpoints
-    ///
-    /// Must be avilable at `/login`
-    ///
-    /// ## Headers
-    ///
-    /// A request header `Authorization` must be provided with user's password.
-    ///
+    /// ## Heaader
+    /// 
+    /// - `Authorization` with user's passphrase
+    /// 
     /// ## Parameters
-    ///
-    /// - `username` must be provided with user's username
-    /// - `status` can be provided with a string to set. Spaces in text represented with `+.`.
-    ///
-    /// ## Response
-    ///
+    /// 
+    /// - `username` user's username
+    /// - `auth` user's passphrase
+    /// 
+    ///  ## Response
+    /// 
     /// Server can reply with
     /// - 200 on success
     /// - 404 on user isn't found
     /// - 400 on improperly formated request
     /// - 401 on unauthorized
     /// - 500 on server failure
-    ///
+    /// 
     /// ### 200
-    ///
+    /// 
     /// ```
     /// {
     ///     "Ok": String
-    /// }
-    /// ```
-    ///
-    /// ### 404, 400, 401, 500
-    ///
-    /// ```
-    /// {
-    ///     "Error": String
     /// }
     /// ```
     fn login(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Logoff
+    /// 
+    /// Allows a user to logiff. User will be marked offline.
+    /// Authorization requied.
+    /// 
+    /// ## Endpoint
+    /// 
+    /// - `/logoff` required
     ///
-    /// Logoff user, setting them offline
-    ///
-    /// ## Endpoints
-    ///
-    /// Must be avilable at `/logoff`
-    ///
-    /// ## Headers
-    ///
-    /// - `Authorization` must be provided with the user's password.
-    ///
+    /// ## Heaader
+    /// 
+    /// - `Authorization` with user's passphrase
+    /// 
     /// ## Parameters
-    ///
-    /// - `username` must be provided with user's username
-    ///
-    /// ## Response
-    ///
+    /// 
+    /// - `username` user's username
+    /// - `auth` user's passphrase
+    /// 
+    ///  ## Response
+    /// 
     /// Server can reply with
     /// - 200 on success
     /// - 404 on user isn't found
     /// - 400 on improperly formated request
     /// - 401 on unauthorized
     /// - 500 on server failure
-    ///
+    /// 
     /// ### 200
-    ///
+    /// 
     /// ```
     /// {
     ///     "Ok": String
     /// }
     /// ```
-    ///
-    /// ### 404, 400, 401, 500
-    ///
-    /// ```
-    /// {
-    ///     "Error": String
-    /// }
-    /// ```
     fn logoff(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Snuggle
+    /// 
+    /// Snuggle a user listed in `user` param. Returning that user's information and adding yourself to their log.
+    /// Authorization required.
+    /// 
+    /// ## Endpoint
+    /// 
+    /// - `/snuggle` required
     ///
-    /// Snuggle a user
-    ///
-    /// ## Endpoints
-    ///
-    /// Must be avilable at `/snuggle`
-    ///
-    /// ## Headers
-    ///
-    /// A request header `Authorization` must be provided with the requesting user's password.
-    ///
+    /// ## Heaader
+    /// 
+    /// - `Authorization` with user's passphrase
+    /// 
     /// ## Parameters
-    ///
-    /// - username: username of user doing the snuggling
-    /// - user: username, plain or federated, of the user to be snuggled.
-    ///
-    /// > [!NOTE]
-    /// > Username: plain username `pockets` for server users.
-    /// > Federated username: username with a server name `pockets@pockets.buzz` to check local or another server.
-    ///
-    /// ## Response
-    ///
+    /// 
+    /// - `username` user's username
+    /// - `auth` user's passphrase
+    /// - `user` user to snuggle's username (`foo`` or `foo@exmaple.com`)
+    /// 
+    ///  ## Response
+    /// 
     /// Server can reply with
     /// - 200 on success
     /// - 404 on user isn't found
     /// - 400 on improperly formated request
     /// - 401 on unauthorized
     /// - 500 on server failure
-    ///
+    /// 
     /// ### 200
-    ///
-    /// Replies with JSON object `User`.
-    ///
+    /// 
+    /// Returns `User` json object
+    /// 
     /// ```
     /// {
-    ///     "User" : {
-    ///         "username" : "pockets@localhost"
-    ///         "website" : null/String,
-    ///         "socials" : {
-    ///             "website": "https://example.com"
-    ///         } ,
-    ///         "bio" : null/String
-    ///     }
+    ///   "User": {
+    ///     "username": "pockets@s.pockets.buzz",
+    ///     "status": {
+    ///       "online": true,
+    ///       "text": "Heyy~",
+    ///       "since": 347
+    ///     },
+    ///     "website": "https://pockets.buzz/",
+    ///     "socials": {
+    ///       "github": "https://github.com/pocketspocketspockets"
+    ///     },
+    ///     "bio": "comfort bun"
+    ///   }
     /// }
     /// ```
     fn snuggle(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Check
     ///
-    /// Check users who snuggled
+    /// Check users who snuggled and clears the list.
+    /// Authorization required.
     ///
     /// ## Endpoints
     ///
-    /// Endpoint must be available at `/check`.
+    /// - `/check` required
     ///
     /// ## Headers
     ///
-    /// - `Authorization` for current user's password.
+    /// - `Authorization` with user's password.
     ///
     /// ## Parameters
     ///
-    /// - `username` for current user's username.
+    /// - `username` with user's username
+    /// - `auth` with user's passphrase
     ///
     /// ## Response
     ///
@@ -225,19 +216,12 @@ pub trait Snuggle {
     ///
     /// ### 200
     ///
-    /// JSON object `List` with a list of `User`.
+    /// JSON object json list of  `User` objects.
     /// ```
     /// {
     ///     "List": [
     ///         {
-    ///             "User": {
-    ///                 "username": String,
-    ///                 "website": null/String,
-    ///                 "socials": {
-    ///                     "website": String
-    ///                 },
-    ///             "bio": null
-    ///             }
+    ///             "User": { ... }
     ///         }
     ///     ]
     /// }
@@ -248,19 +232,20 @@ pub trait Snuggle {
     /// # Bump
     ///
     /// Bump's a user to keep them online for longer than the standard hour.
-    ///
-    ///
+    /// Authorization required.
+    /// 
     /// ## Endpoints
     ///
     /// Must be avilable at `/bump`
     ///
     /// ## Headers
     ///
-    /// - `Authorization` must be provided with user's password.
+    /// - `Authorization` user's password.
     ///
     /// ## Parameters
     ///
-    /// - `username` must be provided.
+    /// - `username` with user's username
+    /// - `auth` with user's passphrase
     ///
     /// ## Response
     ///
@@ -276,14 +261,6 @@ pub trait Snuggle {
     /// ```
     /// {
     ///     "Ok": String
-    /// }
-    /// ```
-    ///
-    /// ### 404, 400, 401, 500
-    ///
-    /// ```
-    /// {
-    ///     "Error": String
     /// }
     /// ```
     fn bump(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
@@ -299,28 +276,16 @@ pub trait Snuggle {
     ///
     /// ### 200
     ///
-    /// JSON object array with `User` objects
+    /// JSON object list with `User` objects
     ///
     /// ```
     /// {
-    ///     "List": [{
-    ///         "User": {
-    ///             "username": "kiwi@localhost",
-    ///             "website":null,
-    ///             "socials": {},
-    ///             "bio": null
-    ///         }
+    ///     "List": [
+    ///     {
+    ///         "User": { ... }
     ///     },
     ///     {
-    ///         "User": {
-    ///             "username":
-    ///             "pockets@localhost",
-    ///             "website": null,
-    ///             "socials": {
-    ///                 "github": "https://github.com/pocketspocketspockets"
-    ///             },
-    ///             "bio": null
-    ///         }
+    ///         "User": { ... }
     ///     }]
     /// }
     /// ```
@@ -328,16 +293,17 @@ pub trait Snuggle {
 
     /// # Register
     ///
-    /// Register a new user account on the current server.
+    /// Register a new user account on the server.
     ///
     /// ## Endpoints
     ///
-    /// Must be avilable at `/register`
+    /// - `/register`
     ///
     /// ## Parameters
     ///
     /// - `key` optional server registration key
     /// - `username` must be provided with new username
+    /// - `password` mut be provided with new passphrase
     ///
     /// ## Response
     ///
@@ -353,34 +319,28 @@ pub trait Snuggle {
     /// ```
     /// {
     ///     "Ok": String
-    /// }
-    /// ```
-    ///
-    /// ### 404, 400, 401, 500
-    ///
-    /// ```
-    /// {
-    ///     "Error": String
     /// }
     /// ```
     fn register(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Deregister
     ///
-    /// Register a new user account on the current server.
+    /// Remove user account on the server.
+    /// Authorization required
     ///
     /// ## Endpoints
     ///
-    /// Must be avilable at `/deregister`
+    /// - `/deregister` required
     ///
     /// ## Headers
     ///
-    /// - `Authorization` required for current user
+    /// - `Authorization` with user's passphrase
     ///
     /// ## Parameters
     ///
-    /// - `key` optional server registration key
-    /// - `username` must be provided with new username
+    /// - `key` with optional server registration key
+    /// - `username` with user's username
+    /// - `auth` with user's passphrase
     ///
     /// ## Response
     ///
@@ -398,31 +358,26 @@ pub trait Snuggle {
     ///     "Ok": String
     /// }
     /// ```
-    ///
-    /// ### 404, 400, 401, 500
-    ///
-    /// ```
-    /// {
-    ///     "Error": String
-    /// }
-    /// ```
     fn deregister(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # set bio
     /// 
-    /// Set a user's biography, or description
+    /// Set or removes a user's biography / description
+    /// no `bio` bio to `null`
+    /// Authorization
     /// 
     /// ## Endpoint
     /// 
-    /// `/setbio` required.
+    /// - `/setbio` required.
     /// 
     /// ## Headers
     /// 
-    /// - `Authorization` required with user's password
+    /// - `Authorization` required with user's passphrase
     /// 
     /// ## Parameters
     /// 
     /// - `username` requried with user's username
+    /// - `auth` required with user's passphrase
     /// - `bio` optional with a biography, spaces separated with `+`. Ombittion of this parameters sets bio to `null`.
     /// 
     /// ## Response
@@ -441,33 +396,27 @@ pub trait Snuggle {
     ///     "Ok": String
     /// }
     /// ```
-    ///
-    /// ### 404, 400, 401, 500
-    ///
-    /// ```
-    /// {
-    ///     "Error": String
-    /// }
-    /// ```
     fn set_bio(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # add social
     /// 
     /// Adds a social link to a user's profile
+    /// Authorization required.
     /// 
     /// ## Endpoint
     /// 
-    /// `/addsocial` required.
+    /// - `/addsocial` required.
     /// 
     /// ## Headers
     /// 
-    /// - `Authorization` required with user's password
+    /// - `Authorization` with user's passphrase
     /// 
     /// ## Parameters
     /// 
-    /// - `username` requried with user's username
+    /// - `username` with user's username
+    /// - `auth` with user's passphrase
     /// - `name` name of service.
-    /// - `string` url of service.
+    /// - `string` url of profile on service.
     /// 
     /// ## Response
     ///
@@ -483,33 +432,27 @@ pub trait Snuggle {
     /// ```
     /// {
     ///     "Ok": String
-    /// }
-    /// ```
-    ///
-    /// ### 404, 400, 401, 500
-    ///
-    /// ```
-    /// {
-    ///     "Error": String
     /// }
     /// ```
     fn add_social(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # remove social
     /// 
-    /// Adds a social link to a user's profile
+    /// Removes a social link from a user's profile
+    /// Authorization required.
     /// 
     /// ## Endpoint
     /// 
-    /// `/delsocial`
+    /// - `/delsocial` required.
     /// 
     /// ## Headers
     /// 
-    /// - `Authorization` required with user's password
+    /// - `Authorization` with user's passphrase
     /// 
     /// ## Parameters
     /// 
-    /// - `username` requried with user's username
+    /// - `username` with user's username
+    /// - `auth` with user's passphrase
     /// - `name` name of service.
     /// 
     /// ## Response
@@ -528,20 +471,14 @@ pub trait Snuggle {
     ///     "Ok": String
     /// }
     /// ```
-    ///
-    /// ### 404, 400, 401, 500
-    ///
-    /// ```
-    /// {
-    ///     "Error": String
-    /// }
-    /// ```
     fn remove_social(state: Self::SelfLock, req: Request)
     -> impl Future<Output = Result<Response>>;
 
-    /// # add social
+    /// # Set website
     /// 
-    /// Adds a social link to a user's profile
+    /// Adds or removes a website link to a user's profile.
+    /// no addr removes the link.
+    /// Authorization requied.
     /// 
     /// ## Endpoint
     /// 
@@ -572,14 +509,6 @@ pub trait Snuggle {
     ///     "Ok": String
     /// }
     /// ```
-    ///
-    /// ### 404, 400, 401, 500
-    ///
-    /// ```
-    /// {
-    ///     "Error": String
-    /// }
-    /// ```
     fn set_website(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Federated Snuggle (federation)
@@ -601,7 +530,9 @@ pub trait Snuggle {
     /// - 401 on unauthorized
     /// - 500 on server failure
     ///
-    /// TODO: Finish Responses
+    /// ### 200
+    /// 
+    /// Responds with `User` object
     fn fed_snuggle(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
 
     /// # Fingerprint (federation)
@@ -622,10 +553,10 @@ pub trait Snuggle {
     /// - 401 on unauthorized
     /// - 500 on server failure
     ///
-    /// TODO: Responses
+    /// ### 200
+    /// 
+    /// Responds with `User` object
     fn fingerprint(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<Response>>;
-
-    // fn save_users(state: Self::SelfLock, req: Request) -> impl Future<Output = Result<()>>;
 }
 
 #[cfg(feature = "blocking")]
