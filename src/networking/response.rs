@@ -7,16 +7,40 @@ use tokio::io::{AsyncWrite, AsyncWriteExt};
 use super::status::ResponseStatus;
 use crate::{prelude::*, userlist::JSONStatus};
 
+/// Server response JSON objects
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub enum JSONResponse {
+    /// `{ "error": String }``
     Error(String),
+    /// `{ "user": { username: String, "status": { ... }, "website": String?, "socials": [ "foo": "https://bar.com" ], bio: String? } }``
+    /// 
+    /// for status see `snuggle::userlist::JSONStatus``
     User {
         username: String,
         status: JSONStatus,
+        website: Option<String>,
+        socials: HashMap<String, String>,
+        bio: Option<String>,
     },
+    /// List of other JSONReponses
     List(Vec<Self>),
-    OK(String),
+
+    /// Ok response with success information
+    /// 
+    /// `{ "ok": String }`
+    Ok(String),
+
+    /// List for `log`
     Log(Vec<String>),
+
+    /// Server information
+    Info {
+        name: String,
+        version: String,
+        licesnse: String,
+        contact: String,
+        users: (usize, usize),
+    },
 }
 
 impl Display for JSONResponse {
@@ -25,6 +49,7 @@ impl Display for JSONResponse {
     }
 }
 
+#[derive(Debug)]
 pub struct Response {
     status: ResponseStatus,
     headers: HashMap<String, String>,
@@ -36,7 +61,7 @@ impl Response {
         let bytes: Vec<u8> = data.to_string().bytes().collect();
 
         let headers = hashmap! {
-            "Content-Type".to_owned() => "text/html".to_string(),
+            "Content-Type".to_owned() => "application/json".to_string(),
             "Content-Length".to_owned() => bytes.len().to_string(),
         };
 
