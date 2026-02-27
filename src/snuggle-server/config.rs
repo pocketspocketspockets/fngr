@@ -11,8 +11,6 @@ pub struct Config {
     pub users_list: PathBuf,
     pub registration: bool,
     pub auth_key: Option<String>,
-    // pub lock: PathBuf,
-    // file: File,
 }
 
 impl Config {
