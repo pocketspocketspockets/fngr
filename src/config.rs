@@ -1,30 +1,28 @@
-use std::path::{Path, PathBuf};
-
+use std::{fs::File, io::Read, path::{Path, PathBuf}};
 use serde::{Deserialize, Serialize};
-use snuggle::prelude::*;
-use tokio::{fs::File, io::AsyncReadExt};
+use crate::prelude::*;
 
 pub struct Config {
     pub server_name: String,
     // pub address: String,
     pub socket_path: String,
-    pub users_list: PathBuf,
+    pub database: PathBuf,
     pub registration: bool,
     pub auth_key: Option<String>,
 }
 
 impl Config {
-    pub async fn load(p: Option<PathBuf>) -> Result<Self> {
-        let p = if let Some(p) = p {
-            is_relative("config", &p)?;
-            p
+    pub fn load(p: Option<impl Clone + Into<PathBuf>>) -> Result<Self> {
+        let p: PathBuf = if let Some(p) = p {
+            is_relative("config", p.clone())?;
+            p.into()
         } else {
             PathBuf::from("/etc/fngr-server/config")
         };
 
-        info!("loading config from {}", p.display());
+        // info!("loading config from {}", p.display());
 
-        let (init, _) = InitialConfig::load(&p).await?;
+        let (init, _) = InitialConfig::load(p.clone())?;
 
         let server_name = init.server_name.clone();
         let socket_path = format!(
@@ -32,18 +30,18 @@ impl Config {
             init.address.or(Some(server_name.clone())).unwrap(),
             init.port
         );
-        let users_list = PathBuf::from(init.users_list);
+        let database = PathBuf::from(init.database);
         let auth_key = init.auth_key;
         let regis = init.registration;
 
-        if auth_key.is_none() && regis {
-            warn!("registration is enabled and authentication key is empty: anybody can register")
-        }
+        // if auth_key.is_none() && regis {
+        //     warn!("registration is enabled and authentication key is empty: anybody can register")
+        // }
 
         Ok(Self {
             server_name,
             socket_path,
-            users_list,
+            database,
             auth_key,
             registration: regis,
         })
@@ -55,18 +53,18 @@ struct InitialConfig {
     server_name: String,
     address: Option<String>,
     port: u16,
-    users_list: String,
+    database: String,
     registration: bool,
     auth_key: Option<String>,
     lock: Option<PathBuf>,
 }
 
 impl InitialConfig {
-    async fn load(p: &Path) -> Result<(Self, File)> {
+    fn load(p: PathBuf) -> Result<(Self, File)> {
         let mut buffer = vec![];
-        let mut file = File::open(p).await?;
+        let mut file = File::open(p)?;
 
-        file.read_to_end(&mut buffer).await?;
+        file.read_to_end(&mut buffer)?;
 
         Ok((toml::from_slice(&buffer)?, file))
     }

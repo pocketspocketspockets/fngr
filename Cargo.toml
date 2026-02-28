@@ -1,29 +1,40 @@
 [package]
 name = "snuggle"
 description = "Simple federated social media inspired by finger"
-version = "0.3.0-alpha"
+version = "0.4.0-alpha"
 edition = "2024"
 license-file = "LICENSE"
 authors = ["Avery Murray <pocketsbuzz@pm.me>"]
 
-[features]
-blocking = []
+# [features]
+# blocking = []
 
-[[bin]]
-name = "snuggle-server"
-path = "src/snuggle-server/main.rs"
+# [[bin]]
+# name = "snuggle-server"
+# path = "src/snuggle-server/main.rs"
 
 [dependencies]
-anyhow = "1.0.100"
-base64-url = "3.0.2"
-maplit = "1.0.2"
-rand = "0.9.2"
-reqwest = "0.13.2"
+rocket = { version = "0.5.1", features = ["serde_json", "uuid"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
+
+# ohkami = { version = "0.24.5", features = ["rt_smol"] }
+# smol = "2.0.2"
+anyhow = "1.0.100"
+# base64-url = "3.0.2"
+# maplit = "1.0.2"
+# serde = { version = "1.0.228", features = ["derive"] }
+# serde_json = "1.0.149"
 sha-rs = "0.1.0"
-tokio = { version = "1.49.0", features = ["full"] }
-toml = "0.9.11"
+lazy_static = "1.5.0"
+# query-lite = "0.12.0"
+# rusqlite = "0.38.0"
+toml = "1.0.3"
+maplit = "1.0.2"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
-uuid = "1.19.0"
+# uuid = "1.19.0"
+# rand = "0.9.2"
+# reqwest = "0.13.2"
+# tokio = { version = "1.49.0", features = ["full"] }
+# toml = "0.9.11"

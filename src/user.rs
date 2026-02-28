@@ -1,19 +1,8 @@
-use std::{
-    collections::HashMap,
-    fmt::Display,
-    ops::{Deref, DerefMut},
-    path::Path,
-    time::Duration,
-};
-
-use crate::{networking::JSONResponse, prelude::*};
+use std::{collections::HashMap, fmt::Display, fs::{File, OpenOptions}, io::{Read, Seek, Write}, ops::{Deref, DerefMut}, path::Path};
+use crate::{jobject::JSONResponse, prelude::*};
+use rocket::{tokio::time::{Instant, Duration}};
 use serde::{Deserialize, Serialize};
 use sha_rs::{Sha, Sha256};
-use tokio::{
-    fs::{File, OpenOptions},
-    io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
-    time::Instant,
-};
 
 /// JSON (De)seriaalizable object with user's status information
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -339,22 +328,22 @@ impl Status {
 
 impl UserList {
     /// loads the userlist from `path`
-    pub async fn load(server_name: &str, p: &Path) -> Result<Self> {
-        info!("loading users from {}", p.display());
+    pub fn load(server_name: &str, p: &Path) -> Result<Self> {
+        // info!("loading users from {}", p.display());
         is_relative("userlist", p)?;
         let mut fin = Self::default();
         let mut users: Vec<InitialUser> = Vec::new();
 
         if p.exists() {
-            let mut file = File::open(p).await?;
+            let mut file = File::open(p)?;
             let mut buffer = vec![];
-            file.read_to_end(&mut buffer).await?;
+            file.read_to_end(&mut buffer)?;
 
             if !buffer.is_empty() {
                 users = serde_json::from_slice(&buffer)?;
             }
         } else {
-            tokio::fs::File::create_new(p).await?;
+            std::fs::File::create_new(p)?;
         }
 
         for user in users {
@@ -383,7 +372,7 @@ impl UserList {
             );
         }
 
-        info!("loaded {} users", fin.len());
+        // info!("loaded {} users", fin.len());
 
         Ok(fin)
     }
@@ -406,13 +395,12 @@ impl UserList {
         let mut file = OpenOptions::new()
             .read(true)
             .write(true)
-            .open(ulpath)
-            .await?;
+            .open(ulpath)?;
 
         let new = serde_json::to_string_pretty(&v)?;
 
-        file.write_all(new.as_bytes()).await?;
-        file.flush().await?;
+        file.write_all(new.as_bytes())?;
+        file.flush()?;
 
         Ok(())
     }
@@ -450,11 +438,10 @@ impl UserList {
         let mut file = OpenOptions::new()
             .read(true)
             .write(true)
-            .open(ulpath)
-            .await?;
+            .open(ulpath)?;
         let mut buffer = vec![];
-        file.read_to_end(&mut buffer).await?;
-        file.rewind().await?;
+        file.read_to_end(&mut buffer)?;
+        file.rewind()?;
 
         let users = if !buffer.trim_ascii().is_empty() {
             let mut users: Vec<InitialUser> = serde_json::from_slice(&buffer)?;
@@ -468,8 +455,8 @@ impl UserList {
 
         let new = serde_json::to_string_pretty(&users)?;
 
-        file.write_all(new.as_bytes()).await?;
-        file.flush().await?;
+        file.write_all(new.as_bytes())?;
+        file.flush()?;
 
         self.insert(
             init_user.username.to_owned(),
@@ -494,11 +481,10 @@ impl UserList {
         let mut file = OpenOptions::new()
             .read(true)
             .write(true)
-            .open(ulpath)
-            .await?;
+            .open(ulpath)?;
         let mut buffer = vec![];
-        file.read_to_end(&mut buffer).await?;
-        file.rewind().await?;
+        file.read_to_end(&mut buffer)?;
+        file.rewind()?;
         let mut users: Vec<InitialUser> = serde_json::from_slice(&buffer)?;
 
         let users_clone = users.clone();
@@ -509,9 +495,9 @@ impl UserList {
         }
 
         let new = serde_json::to_string_pretty(&users)?;
-        file.set_len(0).await?;
-        file.write_all(new.as_bytes()).await?;
-        file.flush().await?;
+        file.set_len(0)?;
+        file.write_all(new.as_bytes())?;
+        file.flush()?;
 
         self.0
             .remove(&username)
