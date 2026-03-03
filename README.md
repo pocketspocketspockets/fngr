@@ -32,7 +32,7 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
 - [x] addsocial
 - [x] delsocial
 - [x] setweb
-- [ ] fed
+- [x] fed
 - [ ] fed/fingerprint
 - [x] profiles
     - [x] website

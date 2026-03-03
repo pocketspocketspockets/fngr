@@ -94,9 +94,6 @@ impl FromSql for Username {
     }
 }
 
-// /// # User
-// ///
-// /// This struct contains user information
 pub struct User {
     username: Username,
     hash: Option<String>,
