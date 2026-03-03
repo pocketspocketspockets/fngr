@@ -252,20 +252,38 @@ async fn snuggle(
     };
 
     let user: jobject::User = if to_user.server() != CONFIG.lock().unwrap().server_name {
+        // federated
         let uuid = Uuid::from_bytes(rand::random());
-        let resp = match reqwest::get(format!("https://{}/{}/{}/{}", to_user.server(), uuid, to_user, by_user)).await {
+
+        FEDERATION.lock().unwrap().insert(by_user.to_string(), uuid);
+
+        let resp = match reqwest::get(format!(
+            "https://{}/{}/{}/{}",
+            to_user.server(),
+            uuid,
+            to_user,
+            by_user
+        ))
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 error!("{}", e);
-                return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+                return (
+                    http::Status::new(500),
+                    jobject::Error(e.to_string()).to_string(),
+                );
             }
         };
 
-       let resp = match resp.text().await {
+        let resp = match resp.text().await {
             Ok(a) => a,
             Err(e) => {
                 error!("{}", e);
-                return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+                return (
+                    http::Status::new(500),
+                    jobject::Error(e.to_string()).to_string(),
+                );
             }
         };
 
@@ -273,10 +291,14 @@ async fn snuggle(
             Ok(u) => u,
             Err(e) => {
                 error!("{}", e);
-                return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+                return (
+                    http::Status::new(500),
+                    jobject::Error(e.to_string()).to_string(),
+                );
             }
         }
     } else {
+        // non federated
         let mut db = DATABASE.lock().unwrap();
         if let Err(e) = db.authorize(&by_user, auth.to_string()) {
             error!("{}", e);
