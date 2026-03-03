@@ -871,8 +871,16 @@ async fn fed_snuggle(fingerprint: Uuid, snuggled: &str, from: &str) -> Result {
         }
     };
 
+    let username: Username = match user.username.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+        }
+    };
+
     let user: User = User::new(
-        user.username.parse().unwrap(),
+        username,
         None,
         user.status.into(),
         SnuggleLog::default(),

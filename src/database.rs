@@ -76,7 +76,13 @@ impl Database {
         })?;
 
         let person = person.next();
-        Ok(person.unwrap()?)
+        match person {
+            Some(Ok(p)) => Ok(p),
+            Some(Err(e)) => {
+                Err(anyhow!(e.to_string()))
+            },
+            None => Err(anyhow!("user {} does not exist", username))
+        }
     }
 
     pub fn get_internal_users(&mut self) -> Result<Vec<User>> {

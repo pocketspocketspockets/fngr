@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 use std::{fs::File, io::Read, path::PathBuf};
 
 #[derive(Debug, Clone)]
@@ -29,18 +30,13 @@ impl Config {
         let server_name = init.server_name.clone();
         let address = init.address;
         let port = init.port;
-        // let socket_path = format!(
-        //     "{}:{}",
-        //     init.address.or(Some(server_name.clone())).unwrap(),
-        //     init.port
-        // );
         let database = PathBuf::from(init.database);
         let auth_key = init.auth_key;
         let regis = init.registration;
 
-        // if auth_key.is_none() && regis {
-        //     warn!("registration is enabled and authentication key is empty: anybody can register")
-        // }
+        if auth_key.is_none() && regis {
+            warn!("registration is enabled and authentication key is empty: anybody can register")
+        }
 
         Ok(Self {
             server_name,
