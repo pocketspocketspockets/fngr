@@ -15,20 +15,14 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
 - [x] check
 - [x] bump
 - [x] list
-- [ ] register
-    - [x] response with proper input
-    - [x] checks username
-    - [x] creates the user
-    - [ ] server registration key
-    - [ ] prevent '@' in provided username
-    - [ ] error handling
+- [x] register
 - [x] deregister
 - [x] setbio
 - [x] addsocial
 - [x] delsocial
 - [x] setweb
 - [x] fed
-- [ ] fed/fingerprint
+- [x] fed/fingerprint
 - [x] profiles
     - [x] website
     - [x] social media list

@@ -484,10 +484,22 @@ async fn list() -> Result {
     (http::Status::new(200), j)
 }
 
-#[get("/register?<username>&<password>")]
-async fn register(username: &str, password: &str) -> Result {
+#[get("/register?<username>&<password>&<key>")]
+async fn register(username: &str, password: &str, key: Option<&str>) -> Result {
     let mut db = DATABASE.lock().unwrap();
     let config = CONFIG.lock().unwrap();
+
+    if !config.registration {
+        return (http::Status::Forbidden, jobject::Error("registration is disabled".to_owned()).to_string());
+    }
+
+    if let Some(key) = key {
+        if let Some(ck) = &config.auth_key {
+            if key != ck {
+                return (http::Status::Forbidden, jobject::Error("invalid registration key".to_owned()).to_string());
+            }
+        }
+    }
 
     let username_to_parse = if username.contains("@") {
         username.to_owned()
