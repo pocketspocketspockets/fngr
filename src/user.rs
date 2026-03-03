@@ -5,6 +5,7 @@ use rusqlite::{
     ToSql,
     types::{FromSql, FromSqlError, Value},
 };
+use serde::{Deserialize, Serialize};
 use std::{
     error::Error,
     fmt::Display,
@@ -12,7 +13,7 @@ use std::{
 };
 use time::UtcDateTime;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Username {
     username: String,
     server: String,

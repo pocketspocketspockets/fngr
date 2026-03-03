@@ -108,23 +108,65 @@ async fn login(
         }
     };
 
+    let username: Username = match username.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    };
 
-    let username = username.parse().unwrap();
     let mut db = DATABASE.lock().unwrap();
-    let auth = db.authorize(&username, auth.to_string()).unwrap();
+    if let Err(e) = db.authorize(&username, auth.to_string()) {
+        error!("{}", e);
+        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+    }
 
-    db.set_user_status_state(&username, true, UtcDateTime::now());
+    if let Err(e) = db.set_user_status_state(&username, true, UtcDateTime::now()) {
+        error!("{}", e);
+        return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+    }
 
     if let Some(status) = status {
-        db.set_user_status_message(&username, status);
+        if let Err(e) = db.set_user_status_message(&username, status) {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
     }
     
-    todo!()
+    (http::Status::new(200), "{ \"Ok\": \"logged in\" }".to_owned())
 }
 
 #[get("/logoff?<username>&<auth>")]
 async fn logoff(username: &str, auth: Option<&str>, hauth: Option<Authorization>) -> Result {
-    todo!()
+    let auth = match auth_filter(auth, hauth) {
+        Ok(a) => a,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let username: Username = match username.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let mut db = DATABASE.lock().unwrap();
+    if let Err(e) = db.authorize(&username, auth.to_string()) {
+        error!("{}", e);
+        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+    }
+
+    if let Err(e) = db.set_user_status_state(&username, false, UtcDateTime::now()) {
+        error!("{}", e);
+        return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+    }
+    
+    (http::Status::new(200), "{ \"Ok\": \"logged in\" }".to_owned())
 }
 
 #[get("/snuggle?<username>&<user>&<auth>")]
@@ -134,7 +176,7 @@ async fn snuggle(
     auth: Option<&str>,
     hauth: Option<Authorization>,
 ) -> Result {
-        let auth = match auth_filter(auth, hauth) {
+    let auth = match auth_filter(auth, hauth) {
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
@@ -142,20 +184,34 @@ async fn snuggle(
         }
     };
 
-    let username = username.parse().unwrap();
-    let user: Username = user.parse().unwrap();
+    let by_user: Username = match username.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let to_user: Username = match user.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    };
 
     let mut db = DATABASE.lock().unwrap();
-
-    if !db.authorize(&username, auth.to_string()).unwrap() {
-        unimplemented!()
+    if let Err(e) = db.authorize(&by_user, auth.to_string()) {
+        error!("{}", e);
+        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
     }
 
-    if user.server() != CONFIG.lock().unwrap().server_name {
-        unimplemented!()
+    if let Err(e) = db.add_to_log(&to_user, &by_user) {
+        error!("{}", e);
+        return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
     }
 
-    let user: jobject::User = db.get_user(&user).unwrap().into();
+    let user: jobject::User = db.get_user(&to_user).unwrap().into();
     let user = serde_json::to_string(&user).unwrap();
 
     (http::Status::new(200), user)

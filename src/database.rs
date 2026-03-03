@@ -1,5 +1,5 @@
 use crate::{
-    jobject,
+    jobject::{self, SnuggleLog},
     prelude::*,
     user::{Status, User, Username},
 };
@@ -224,6 +224,24 @@ impl Database {
         Ok(())
     }
 
+    pub fn add_to_log(&mut self, username: &Username, by: &Username) -> Result<()> {
+        let user = self.get_user(username)?;
+        let mut log: SnuggleLog = user.log().clone();
+        log.0.push(by.clone());
+
+        self.0.execute("UPDATE user SET log = ?1 WHERE username = ?2", (log, username))?;
+        Ok(())
+    }
+
+    pub fn reset_log(&mut self, username: &Username) -> Result<SnuggleLog> {
+        let user = self.get_user(username)?;
+        let log: SnuggleLog = user.log().clone();
+        let new = SnuggleLog::default();
+
+        self.0.execute("UPDATE user SET log = ?1 WHERE username = ?2", (new, username))?;
+        Ok(log)
+    }
+
     pub fn add_user_social(
         &mut self,
         username: &Username,
@@ -244,11 +262,11 @@ impl Database {
         self.set_user_social(&username, socials)
     }
 
-    pub fn authorize(&mut self, username: &Username, ihash: String) -> Result<bool> {
+    pub fn authorize(&mut self, username: &Username, ihash: String) -> Result<()> {
         let user = self.get_user(username)?;
         if let Some(hash) = user.hash() {
             if hash == ihash {
-                Ok(true)
+                Ok(())
             } else {
                 Err(anyhow!("incorrect passphrase"))
             }

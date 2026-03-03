@@ -7,6 +7,8 @@ use rusqlite::{
 use serde::{Deserialize, Serialize};
 use time::UtcDateTime;
 
+use crate::user::Username;
+
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Status {
     pub(crate) online: bool,
@@ -51,8 +53,8 @@ pub struct User {
     pub status: Status,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SnuggleLog(Vec<String>);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SnuggleLog(pub(crate) Vec<Username>);
 
 impl Default for SnuggleLog {
     fn default() -> Self {

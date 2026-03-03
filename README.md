@@ -9,16 +9,14 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
 ## Features
 
 - [x] info
-- [ ] login
-    - [x] response with proper input
-    - [ ] error handling
-- [ ] logoff
+- [x] login
+- [x] logoff
 - [ ] snuggle
-    - [x] basic response with proper input
+    - [x] response with proper input
     - [ ] local username
-    - [ ] log
+    - [x] log
     - [ ] federation
-    - [ ] error handling
+    - [x] error handling
 - [ ] check
 - [ ] bump
 - [x] list
@@ -26,6 +24,7 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
     - [x] response with proper input
     - [x] checks username
     - [x] creates the user
+    - [ ] prevent '@' in provided username
     - [ ] error handling
 - [ ] deregister
 - [ ] setbio
