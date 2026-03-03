@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
     io::Read,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 #[derive(Debug, Clone)]

@@ -1,14 +1,11 @@
-use std::{collections::HashMap, fmt::Display, time::Duration};
+use std::{collections::HashMap, fmt::Display};
 
 use rusqlite::{
     ToSql,
     types::{FromSql, FromSqlError, ToSqlOutput},
 };
-// use rocket::tokio::time::Instant;
 use serde::{Deserialize, Serialize};
 use time::UtcDateTime;
-
-use crate::user::Username;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Status {
@@ -36,9 +33,9 @@ impl Into<crate::user::Status> for Status {
             text: self.text,
             // TODO: maybe don't reset time to NOW.
             since: time::UtcDateTime::from_unix_timestamp(self.since)
-                .unwrap_or_else(|a| UtcDateTime::now()),
+                .unwrap_or_else(|_| UtcDateTime::now()),
             bumped: self.bump.map(|i| {
-                time::UtcDateTime::from_unix_timestamp(i).unwrap_or_else(|a| UtcDateTime::now())
+                time::UtcDateTime::from_unix_timestamp(i).unwrap_or_else(|_| UtcDateTime::now())
             }),
         }
     }

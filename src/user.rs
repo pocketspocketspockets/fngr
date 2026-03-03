@@ -1,31 +1,16 @@
 use crate::{
-    CONFIG,
-    config::Config,
     jobject::{self, SnuggleLog, SocialsList},
-    prelude::*,
 };
-use rocket::tokio::time::{Duration, Instant};
 use rusqlite::{
     ToSql,
     types::{FromSql, FromSqlError, Value},
 };
-use serde::{Deserialize, Serialize};
-use sha_rs::{Sha, Sha256};
 use std::{
-    collections::HashMap,
-    convert::Infallible,
     error::Error,
     fmt::Display,
-    fs::{File, OpenOptions},
-    io::{Read, Seek, Write},
-    ops::{Deref, DerefMut},
-    path::Path,
-    str::{FromStr, Utf8Error},
-    string::ParseError,
-    sync::MutexGuard,
+    str::FromStr,
 };
 use time::UtcDateTime;
-use tracing::warn;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Username {

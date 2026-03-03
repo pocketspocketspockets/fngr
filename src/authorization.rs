@@ -1,6 +1,6 @@
 use rocket::{
     Request,
-    http::{Status, private::cookie::Display},
+    http,
     request::{self, FromRequest},
 };
 use sha_rs::Sha;
@@ -17,7 +17,7 @@ impl<'r> FromRequest<'r> for Authorization {
 
         match token {
             Some(h) => request::Outcome::Success(Authorization::from_str(h)),
-            None => request::Outcome::Forward(Status::Processing),
+            None => request::Outcome::Forward(http::Status::Processing),
         }
     }
 }

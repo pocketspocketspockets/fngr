@@ -1,8 +1,6 @@
 use std::path::PathBuf;
 
 pub use anyhow::{Result, anyhow};
-
-use crate::user::Username;
 // pub use tracing::{debug, error, info, subscriber, warn};
 
 /// Helper function to return an error if path is relative using `Path::is_relative`. The check is disabled in a debug binary.

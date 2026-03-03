@@ -5,20 +5,18 @@
 use crate::user::Username;
 use crate::{authorization::Authorization, config::Config, database::Database, user::User};
 use lazy_static::lazy_static;
-use rocket::{Data, catch, catcher, catchers, response};
+use rocket::{catch,catchers};
 use rocket::{
-    Response, get,
-    http::{self, Status},
+    get,
+    http,
     post, routes,
     serde::uuid::Uuid,
 };
 use sha_rs::Sha;
 use time::UtcDateTime;
-use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
-use std::sync::Arc;
-use std::{io::Cursor, pin::Pin, sync::Mutex};
-use tracing::{error, info, warn};
+use std::sync::Mutex;
+use tracing::{error, warn};
 
 mod authorization;
 mod config;
@@ -33,18 +31,18 @@ type Result = (http::Status, String);
 #[cfg(debug_assertions)]
 lazy_static! {
     /// Stores config globally. If function needs both config and database, lock database first.
-    static ref CONFIG: Arc<Mutex<Config>> = Arc::new(Mutex::new(Config::load(Some("./snuggle.config")).unwrap()));
+    static ref CONFIG: Mutex<Config> = Mutex::new(Config::load(Some("./snuggle.config")).unwrap());
 }
 
 #[cfg(not(debug_assertions))]
 lazy_static! {
-    static ref CONFIG: Arc<Mutex<Config>> = Arc::new(Mutex::new(Config::load(None).unwrap()));
+    static ref CONFIG: Mutex<Config> = Mutex::new(Config::load(None).unwrap());
 }
 
 lazy_static! {
-    static ref DATABASE: Arc<Mutex<Database>> = Arc::new(Mutex::new(
+    static ref DATABASE: Mutex<Database> = Mutex::new(
         Database::load(&CONFIG.lock().unwrap().database).unwrap()
-    ));
+    );
 }
 
 #[get("/info")]
