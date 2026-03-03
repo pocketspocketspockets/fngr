@@ -28,8 +28,8 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
     - [ ] prevent '@' in provided username
     - [ ] error handling
 - [x] deregister
-- [ ] setbio
-- [ ] addsocial
+- [x] setbio
+- [x] addsocial
 - [ ] delsocial
 - [ ] setweb
 - [ ] fed
