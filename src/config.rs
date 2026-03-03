@@ -1,11 +1,17 @@
-use std::{fs::File, io::Read, path::{Path, PathBuf}};
-use serde::{Deserialize, Serialize};
 use crate::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
+#[derive(Debug, Clone)]
 pub struct Config {
     pub server_name: String,
-    // pub address: String,
-    pub socket_path: String,
+    pub address: Option<String>,
+    pub port: Option<u16>,
+    // pub socket_path: String,
     pub database: PathBuf,
     pub registration: bool,
     pub auth_key: Option<String>,
@@ -17,7 +23,7 @@ impl Config {
             is_relative("config", p.clone())?;
             p.into()
         } else {
-            PathBuf::from("/etc/fngr-server/config")
+            PathBuf::from("/etc/snuggle/config")
         };
 
         // info!("loading config from {}", p.display());
@@ -25,11 +31,13 @@ impl Config {
         let (init, _) = InitialConfig::load(p.clone())?;
 
         let server_name = init.server_name.clone();
-        let socket_path = format!(
-            "{}:{}",
-            init.address.or(Some(server_name.clone())).unwrap(),
-            init.port
-        );
+        let address = init.address;
+        let port = init.port;
+        // let socket_path = format!(
+        //     "{}:{}",
+        //     init.address.or(Some(server_name.clone())).unwrap(),
+        //     init.port
+        // );
         let database = PathBuf::from(init.database);
         let auth_key = init.auth_key;
         let regis = init.registration;
@@ -40,7 +48,9 @@ impl Config {
 
         Ok(Self {
             server_name,
-            socket_path,
+            address,
+            port,
+            // socket_path,
             database,
             auth_key,
             registration: regis,
@@ -52,7 +62,7 @@ impl Config {
 struct InitialConfig {
     server_name: String,
     address: Option<String>,
-    port: u16,
+    port: Option<u16>,
     database: String,
     registration: bool,
     auth_key: Option<String>,

@@ -1,122 +1,365 @@
-use std::sync::Mutex;
-use lazy_static::lazy_static;
-use rocket::{get, post, routes, serde::uuid::Uuid};
-use tracing::error;
-use crate::{authorization::Authorization, config::Config, jobject::JSONResponse, user::UserList};
+#![forbid(clippy::unwrap_used)]
+#![forbid(clippy::expect_used)]
+#![forbid(unsafe_code)]
 
-mod config;
-mod prelude;
+use crate::user::Username;
+use crate::{authorization::Authorization, config::Config, database::Database, user::User};
+use lazy_static::lazy_static;
+use rocket::{Data, catch, catcher, catchers, response};
+use rocket::{
+    Response, get,
+    http::{self, Status},
+    post, routes,
+    serde::uuid::Uuid,
+};
+use sha_rs::Sha;
+use time::UtcDateTime;
+use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr};
+use std::sync::Arc;
+use std::{io::Cursor, pin::Pin, sync::Mutex};
+use tracing::{error, info, warn};
+
 mod authorization;
-mod user;
+mod config;
+mod database;
 mod jobject;
+mod prelude;
+mod user;
+// mod error;
+
+type Result = (http::Status, String);
 
 #[cfg(debug_assertions)]
 lazy_static! {
-    static ref CONFIG: Mutex<Config> = Mutex::new(Config::load(Some("./snuggle.config")).unwrap());
+    /// Stores config globally. If function needs both config and database, lock database first.
+    static ref CONFIG: Arc<Mutex<Config>> = Arc::new(Mutex::new(Config::load(Some("./snuggle.config")).unwrap()));
 }
 
 #[cfg(not(debug_assertions))]
 lazy_static! {
-    static ref CONFIG: Mutex<Config> = Mutex::new(Config::load(None).unwrap());
+    static ref CONFIG: Arc<Mutex<Config>> = Arc::new(Mutex::new(Config::load(None).unwrap()));
 }
 
 lazy_static! {
-    static ref DATABASE: Mutex<UserList> = {
-        let server_name = CONFIG.lock().unwrap().server_name.clone();
-        let path = CONFIG.lock().unwrap().database.clone();
-        Mutex::new(UserList::load(&server_name, &path).unwrap())
-    };
+    static ref DATABASE: Arc<Mutex<Database>> = Arc::new(Mutex::new(
+        Database::load(&CONFIG.lock().unwrap().database).unwrap()
+    ));
 }
 
 #[get("/info")]
-fn info() {
-    todo!()
-}
+fn info() -> Result {
+    let count = DATABASE.lock().unwrap().count();
 
-#[get("/login?<username>&<auth>&<status>")]
-async fn login(username: &str, status: Option<&str>, auth: Option<&str>, hauth: Option<Authorization>) {
-}
-
-#[get("/logoff?<username>&<auth>")]
-fn logoff(username: &str, auth: Option<&str>, hauth: Authorization) {}
-
-#[get("/snuggle?<username>&<user>&<auth>")]
-fn snuggle(username: &str, user: &str, auth: Option<&str>, hauth: Authorization) {}
-
-#[get("/check?<username>&<auth>")]
-fn check(username: &str, auth: Option<&str>, hauth: Authorization) {}
-
-#[get("/bump?<username>&<auth>")]
-fn bump(username: &str, auth: Option<&str>, hauth: Authorization) {}
-
-#[get("/list")]
-async fn list() -> Option<String> {
-    let ul = DATABASE.lock().unwrap();
-    let mut output: Vec<JSONResponse> = Vec::new();
-
-    for user in ul.values() {
-        println!("{:?}", user.username());
-        output.push(JSONResponse::TinyUser { username: user.username(), online: user.online() })
-    }
-
-    let output = JSONResponse::List(output);
-    match serde_json::to_string(&output) {
-        Ok(a) => Some(a),
+    let count = match count {
+        Ok(c) => c,
         Err(e) => {
-            error!("failed to generate json response: {e}");
-            Some(JSONResponse::Error(e.to_string()).to_string())
+            error!("{}", e);
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
+        }
+    };
+
+    let info = jobject::Info {
+        name: env!("CARGO_PKG_NAME"),
+        version: env!("CARGO_PKG_VERSION"),
+        api_version: "1.0",
+        license: env!("CARGO_PKG_LICENSE"),
+        contact: env!("CARGO_PKG_AUTHORS"),
+        users: count,
+    };
+
+    let j = serde_json::to_string(&info);
+
+    match j {
+        Ok(j) => (http::Status::new(200), j),
+        Err(e) => {
+            error!("{}", e);
+            (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            )
+        }
+    }
+}
+
+fn auth_filter(auth: Option<&str>, hauth: Option<Authorization>) -> anyhow::Result<Authorization> {
+    match hauth {
+        Some(h) => Ok(h),
+        None => match auth {
+            Some(h) => Ok(Authorization::from_str(h)),
+            None => Err(anyhow::anyhow!("authorization required")),
         },
     }
 }
 
-#[get("/register?<username>&<password>")]
-fn register(username: &str, password: Option<&str>) {
+#[get("/login?<username>&<auth>&<status>")]
+async fn login(
+    username: &str,
+    status: Option<&str>,
+    auth: Option<&str>,
+    hauth: Option<Authorization>,
+) -> Result {
+    let auth = match auth_filter(auth, hauth) {
+        Ok(a) => a,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+        }
+    };
 
+
+    let username = username.parse().unwrap();
+    let mut db = DATABASE.lock().unwrap();
+    let auth = db.authorize(&username, auth.to_string()).unwrap();
+
+    db.set_user_status_state(&username, true, UtcDateTime::now());
+
+    if let Some(status) = status {
+        db.set_user_status_message(&username, status);
+    }
+    
+    todo!()
+}
+
+#[get("/logoff?<username>&<auth>")]
+async fn logoff(username: &str, auth: Option<&str>, hauth: Option<Authorization>) -> Result {
+    todo!()
+}
+
+#[get("/snuggle?<username>&<user>&<auth>")]
+async fn snuggle(
+    username: &str,
+    user: &str,
+    auth: Option<&str>,
+    hauth: Option<Authorization>,
+) -> Result {
+        let auth = match auth_filter(auth, hauth) {
+        Ok(a) => a,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let username = username.parse().unwrap();
+    let user: Username = user.parse().unwrap();
+
+    let mut db = DATABASE.lock().unwrap();
+
+    if !db.authorize(&username, auth.to_string()).unwrap() {
+        unimplemented!()
+    }
+
+    if user.server() != CONFIG.lock().unwrap().server_name {
+        unimplemented!()
+    }
+
+    let user: jobject::User = db.get_user(&user).unwrap().into();
+    let user = serde_json::to_string(&user).unwrap();
+
+    (http::Status::new(200), user)
+}
+
+#[get("/check?<username>&<auth>")]
+async fn check(username: &str, auth: Option<&str>, hauth: Option<Authorization>) -> Result {
+    unimplemented!()
+}
+
+#[get("/bump?<username>&<auth>")]
+async fn bump(username: &str, auth: Option<&str>, hauth: Option<Authorization>) -> Result {
+    unimplemented!()
+}
+
+#[get("/list")]
+async fn list() -> Result {
+    let mut db = DATABASE.lock().unwrap();
+
+    let users = match db.get_internal_users() {
+        Ok(us) => us,
+        Err(e) => {
+            error!("{}", e);
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
+        }
+    };
+
+    let mut userslistusers = Vec::new();
+
+    for user in users {
+        userslistusers.push(jobject::UserListUser {
+            username: user.username().to_string(),
+            status: user.status().to_owned().into(),
+        })
+    }
+
+    let j = match serde_json::to_string(&userslistusers) {
+        Ok(j) => j,
+        Err(e) => {
+            error!("{}", e);
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
+        }
+    };
+
+    (http::Status::new(200), j)
+}
+
+#[get("/register?<username>&<password>")]
+async fn register(username: &str, password: &str) -> Result {
+    let mut db = DATABASE.lock().unwrap();
+    let config = CONFIG.lock().unwrap();
+
+    let username_to_parse = if username.contains("@") {
+        username.to_owned()
+    } else {
+        format!("{}@{}", username, config.server_name)
+    };
+
+    let username = username_to_parse.parse().unwrap();
+
+    match db.get_user(&username) {
+        Ok(_) => {
+            return (
+                http::Status::new(403),
+                jobject::Error("user already exists".to_owned()).to_string(),
+            );
+        }
+        Err(e) => warn!("{}: {}", "unhandled error", e),
+    };
+
+    let sha = sha_rs::Sha256::new();
+    let hash = sha.digest(password.as_bytes());
+
+    let user = User::new(
+        username,
+        Some(hash),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+    );
+
+    if let Err(e) = db.add_user(user) {
+        error!("{}", e);
+        (
+            http::Status::new(500),
+            jobject::Error(e.to_string()).to_string(),
+        )
+    } else {
+        (
+            http::Status::new(201),
+            "{ \"Ok\": \"User created\" }".to_owned(),
+        )
+    }
 }
 
 #[get("/deregister?<username>&<auth>")]
-fn deregister(username: &str, auth: Option<&str>, hauth: Authorization) {}
+async fn deregister(username: &str, auth: Option<&str>, hauth: Option<Authorization>) -> Result {
+    unimplemented!()
+}
 
 #[get("/setbio?<username>&<auth>&<bio>")]
-fn set_bio(username: &str, auth: Option<&str>, bio: Option<&str>, hauth: Authorization) {}
+async fn set_bio(
+    username: &str,
+    auth: Option<&str>,
+    bio: Option<&str>,
+    hauth: Option<Authorization>,
+) -> Result {
+    // let mut db = DATABASE.lock().unwrap();
+    // let username = username.parse().unwrap();
+    // db.set_user_bio(&username, bio).unwrap();
+    // (http::Status::new(200), "{ \"Ok\": \"status set\" }".to_owned())
+    unimplemented!()
+}
 
 #[get("/addsocial?<username>&<auth>&<name>&<string>")]
-fn add_social(username: &str, auth: Option<&str>, name: &str, string: &str, hauth: Authorization) {}
+async fn add_social(
+    username: &str,
+    auth: Option<&str>,
+    name: &str,
+    string: &str,
+    hauth: Option<Authorization>,
+) -> Result {
+    unimplemented!()
+}
 
 #[get("/delsocial?<username>&<auth>&<name>")]
-fn del_social(username: &str, auth: Option<&str>, name: &str, hauth: Authorization) {}
+async fn del_social(
+    username: &str,
+    auth: Option<&str>,
+    name: &str,
+    hauth: Option<Authorization>,
+) -> Result {
+    unimplemented!()
+}
 
 #[get("/setweb?<username>&<auth>&<addr>")]
-fn website(username: &str, auth: Option<&str>, addr: Option<&str>, hauth: Authorization) {}
+async fn website(
+    username: &str,
+    auth: Option<&str>,
+    addr: Option<&str>,
+    hauth: Option<Authorization>,
+) -> Result {
+    unimplemented!()
+}
 
 #[post("/<fingerprint>/<snuggled>/<from>")]
-fn fed_snuggle(fingerprint: Uuid, snuggled: &str, from: &str) {}
+async fn fed_snuggle(fingerprint: Uuid, snuggled: &str, from: &str) -> Result {
+    unimplemented!()
+}
 
 #[get("/fingerprint/<user>/<fingerprint>")]
-fn fingerprint(user: &str, fingerprint: Uuid) {}
+async fn fingerprint(user: &str, fingerprint: Uuid) -> Result {
+    unimplemented!()
+}
+
+#[catch(500)]
+async fn e500() -> String {
+    jobject::Error("500".to_owned()).to_string()
+}
+
+#[catch(default)]
+async fn edefault() -> String {
+    jobject::Error("error".to_owned()).to_string()
+}
 
 #[rocket::main]
 async fn main() {
-    let rocket = rocket::build()
+    let address = CONFIG
+        .lock()
+        .unwrap()
+        .address
+        .clone()
+        .map(|a| a.parse().unwrap())
+        .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
+    let port = CONFIG.lock().unwrap().port.unwrap_or(5377);
+
+    let rconfig = rocket::Config {
+        address,
+        port,
+        ..Default::default()
+    };
+
+    rocket::build()
         .mount(
             "/",
             routes![
-                info,
-                login,
-                logoff,
-                snuggle,
-                check,
-                bump,
-                list,
-                register,
-                deregister,
-                set_bio,
-                add_social,
-                del_social,
-                website,
+                info, login, logoff, snuggle, check, bump, list, register, deregister, set_bio,
+                add_social, del_social, website,
             ],
         )
         .mount("/fed", routes![fed_snuggle, fingerprint])
+        .register("/", catchers![e500, edefault])
+        .register("/fed", catchers![e500, edefault])
+        .configure(rconfig)
         .launch()
         .await
         .unwrap();
