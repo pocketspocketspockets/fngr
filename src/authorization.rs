@@ -1,6 +1,5 @@
 use rocket::{
-    Request,
-    http,
+    Request, http,
     request::{self, FromRequest},
 };
 use sha_rs::Sha;

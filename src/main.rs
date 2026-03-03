@@ -6,17 +6,13 @@ use crate::jobject::SnuggleLog;
 use crate::user::Username;
 use crate::{authorization::Authorization, config::Config, database::Database, user::User};
 use lazy_static::lazy_static;
-use rocket::{catch,catchers};
-use rocket::{
-    get,
-    http,
-    post, routes,
-    serde::uuid::Uuid,
-};
+use rocket::{catch, catchers};
+use rocket::{get, http, post, routes, serde::uuid::Uuid};
 use sha_rs::Sha;
-use time::UtcDateTime;
+use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::sync::Mutex;
+use time::UtcDateTime;
 use tracing::{error, warn};
 
 mod authorization;
@@ -41,9 +37,9 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref DATABASE: Mutex<Database> = Mutex::new(
-        Database::load(&CONFIG.lock().unwrap().database).unwrap()
-    );
+    static ref DATABASE: Mutex<Database> =
+        Mutex::new(Database::load(&CONFIG.lock().unwrap().database).unwrap());
+    static ref FEDERATION: Mutex<HashMap<String, Uuid>> = Mutex::new(HashMap::new());
 }
 
 #[get("/info")]
@@ -105,7 +101,10 @@ async fn login(
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::Unauthorized,
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -113,29 +112,44 @@ async fn login(
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
     let mut db = DATABASE.lock().unwrap();
     if let Err(e) = db.authorize(&username, auth.to_string()) {
         error!("{}", e);
-        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(401),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     if let Err(e) = db.set_user_status_state(&username, true, UtcDateTime::now()) {
         error!("{}", e);
-        return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(500),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     if let Some(status) = status {
         if let Err(e) = db.set_user_status_message(&username, status) {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     }
-    
-    (http::Status::new(200), "{ \"Ok\": \"logged in\" }".to_owned())
+
+    (
+        http::Status::new(200),
+        "{ \"Ok\": \"logged in\" }".to_owned(),
+    )
 }
 
 #[get("/logoff?<username>&<auth>")]
@@ -144,7 +158,10 @@ async fn logoff(username: &str, auth: Option<&str>, hauth: Option<Authorization>
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::Unauthorized,
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -152,22 +169,34 @@ async fn logoff(username: &str, auth: Option<&str>, hauth: Option<Authorization>
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
     let mut db = DATABASE.lock().unwrap();
     if let Err(e) = db.authorize(&username, auth.to_string()) {
         error!("{}", e);
-        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(401),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     if let Err(e) = db.set_user_status_state(&username, false, UtcDateTime::now()) {
         error!("{}", e);
-        return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(500),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
-    
-    (http::Status::new(200), "{ \"Ok\": \"logged in\" }".to_owned())
+
+    (
+        http::Status::new(200),
+        "{ \"Ok\": \"logged in\" }".to_owned(),
+    )
 }
 
 #[get("/snuggle?<username>&<user>&<auth>")]
@@ -181,7 +210,10 @@ async fn snuggle(
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::Unauthorized,
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -201,7 +233,10 @@ async fn snuggle(
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -209,29 +244,78 @@ async fn snuggle(
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
-    if to_user.server() != CONFIG.lock().unwrap().server_name {
-        unimplemented!("federation");
+    let user: jobject::User = if to_user.server() != CONFIG.lock().unwrap().server_name {
+        let uuid = Uuid::from_bytes(rand::random());
+        let resp = match reqwest::get(format!("https://{}/{}/{}/{}", to_user.server(), uuid, to_user, by_user)).await {
+            Ok(r) => r,
+            Err(e) => {
+                error!("{}", e);
+                return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+            }
+        };
+
+       let resp = match resp.text().await {
+            Ok(a) => a,
+            Err(e) => {
+                error!("{}", e);
+                return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+            }
+        };
+
+        match serde_json::from_str(&resp) {
+            Ok(u) => u,
+            Err(e) => {
+                error!("{}", e);
+                return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+            }
+        }
+    } else {
+        let mut db = DATABASE.lock().unwrap();
+        if let Err(e) = db.authorize(&by_user, auth.to_string()) {
+            error!("{}", e);
+            return (
+                http::Status::new(401),
+                jobject::Error(e.to_string()).to_string(),
+            );
+        }
+
+        if let Err(e) = db.add_to_log(&to_user, &by_user) {
+            error!("{}", e);
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
+        }
+
+        match db.get_user(&to_user) {
+            Ok(u) => u.into(),
+            Err(e) => {
+                error!("{}", e);
+                return (
+                    http::Status::new(500),
+                    jobject::Error(e.to_string()).to_string(),
+                );
+            }
+        }
+    };
+
+    match serde_json::to_string(&user) {
+        Ok(user) => (http::Status::new(200), user),
+        Err(e) => {
+            error!("{}", e);
+            (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            )
+        }
     }
-
-    let mut db = DATABASE.lock().unwrap();
-    if let Err(e) = db.authorize(&by_user, auth.to_string()) {
-        error!("{}", e);
-        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
-    }
-
-    if let Err(e) = db.add_to_log(&to_user, &by_user) {
-        error!("{}", e);
-        return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
-    }
-
-    let user: jobject::User = db.get_user(&to_user).unwrap().into();
-    let user = serde_json::to_string(&user).unwrap();
-
-    (http::Status::new(200), user)
 }
 
 #[get("/check?<username>&<auth>")]
@@ -240,7 +324,10 @@ async fn check(username: &str, auth: Option<&str>, hauth: Option<Authorization>)
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::Unauthorized,
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -248,21 +335,30 @@ async fn check(username: &str, auth: Option<&str>, hauth: Option<Authorization>)
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
     let mut db = DATABASE.lock().unwrap();
     if let Err(e) = db.authorize(&username, auth.to_string()) {
         error!("{}", e);
-        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(401),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     let log = match db.reset_log(&username) {
         Ok(l) => l,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -270,7 +366,10 @@ async fn check(username: &str, auth: Option<&str>, hauth: Option<Authorization>)
         Ok(l) => l,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -283,7 +382,10 @@ async fn bump(username: &str, auth: Option<&str>, hauth: Option<Authorization>) 
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::Unauthorized,
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -291,21 +393,33 @@ async fn bump(username: &str, auth: Option<&str>, hauth: Option<Authorization>) 
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
     let mut db = DATABASE.lock().unwrap();
     if let Err(e) = db.authorize(&username, auth.to_string()) {
         error!("{}", e);
-        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(401),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     match db.set_user_status_bump(&username, Some(UtcDateTime::now())) {
-        Ok(()) => (http::Status::new(200), "{ \"Ok\": \"You are bumped\" }".to_owned()),
+        Ok(()) => (
+            http::Status::new(200),
+            "{ \"Ok\": \"You are bumped\" }".to_owned(),
+        ),
         Err(e) => {
             error!("{}", e);
-            (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            )
         }
     }
 }
@@ -404,7 +518,10 @@ async fn deregister(username: &str, auth: Option<&str>, hauth: Option<Authorizat
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::Unauthorized,
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -412,21 +529,33 @@ async fn deregister(username: &str, auth: Option<&str>, hauth: Option<Authorizat
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
     let mut db = DATABASE.lock().unwrap();
     if let Err(e) = db.authorize(&username, auth.to_string()) {
         error!("{}", e);
-        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(401),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     match db.delete_user(&username) {
-        Ok(_) => (http::Status::new(200), "\"Ok\": \"you are deregistered\" }".to_owned()),
+        Ok(_) => (
+            http::Status::new(200),
+            "\"Ok\": \"you are deregistered\" }".to_owned(),
+        ),
         Err(e) => {
             error!("{}", e);
-            (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+            (
+                http::Status::new(401),
+                jobject::Error(e.to_string()).to_string(),
+            )
         }
     }
 }
@@ -442,7 +571,10 @@ async fn set_bio(
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::Unauthorized,
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -450,21 +582,33 @@ async fn set_bio(
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
     let mut db = DATABASE.lock().unwrap();
     if let Err(e) = db.authorize(&username, auth.to_string()) {
         error!("{}", e);
-        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(401),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     match db.set_user_bio(&username, bio) {
-        Ok(_) => (http::Status::new(200), "{ \"Ok\": \"Your bio is set\" }".to_owned()),
+        Ok(_) => (
+            http::Status::new(200),
+            "{ \"Ok\": \"Your bio is set\" }".to_owned(),
+        ),
         Err(e) => {
             error!("{}", e);
-            (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            )
         }
     }
 }
@@ -481,7 +625,10 @@ async fn add_social(
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::Unauthorized,
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -489,21 +636,33 @@ async fn add_social(
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
     let mut db = DATABASE.lock().unwrap();
     if let Err(e) = db.authorize(&username, auth.to_string()) {
         error!("{}", e);
-        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(401),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     match db.add_user_social(&username, (name, string)) {
-        Ok(_) => (http::Status::new(200), "{ \"Ok\": \"Your social is added\" }".to_owned()),
+        Ok(_) => (
+            http::Status::new(200),
+            "{ \"Ok\": \"Your social is added\" }".to_owned(),
+        ),
         Err(e) => {
             error!("{}", e);
-            (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            )
         }
     }
 }
@@ -519,7 +678,10 @@ async fn del_social(
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::Unauthorized,
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -527,21 +689,33 @@ async fn del_social(
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
     let mut db = DATABASE.lock().unwrap();
     if let Err(e) = db.authorize(&username, auth.to_string()) {
         error!("{}", e);
-        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(401),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     match db.remove_user_social(&username, name) {
-        Ok(_) => (http::Status::new(200), "{ \"Ok\": \"Your social is removed\" }".to_owned()),
+        Ok(_) => (
+            http::Status::new(200),
+            "{ \"Ok\": \"Your social is removed\" }".to_owned(),
+        ),
         Err(e) => {
             error!("{}", e);
-            (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            )
         }
     }
 }
@@ -557,7 +731,10 @@ async fn website(
         Ok(a) => a,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::Unauthorized,
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -565,21 +742,33 @@ async fn website(
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
     let mut db = DATABASE.lock().unwrap();
     if let Err(e) = db.authorize(&username, auth.to_string()) {
         error!("{}", e);
-        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+        return (
+            http::Status::new(401),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     match db.set_user_website(&username, addr) {
-        Ok(_) => (http::Status::new(200), "{ \"Ok\": \"Your website is set\" }".to_owned()),
+        Ok(_) => (
+            http::Status::new(200),
+            "{ \"Ok\": \"Your website is set\" }".to_owned(),
+        ),
         Err(e) => {
             error!("{}", e);
-            (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            )
         }
     }
 }
@@ -590,7 +779,10 @@ async fn fed_snuggle(fingerprint: Uuid, snuggled: &str, from: &str) -> Result {
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -598,25 +790,39 @@ async fn fed_snuggle(fingerprint: Uuid, snuggled: &str, from: &str) -> Result {
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
-    let r = match reqwest::get(format!("https://{}/fed/fingerprint/{}/{}", from.server(), from, fingerprint)).await {
+    let r = match reqwest::get(format!(
+        "https://{}/fed/fingerprint/{}/{}",
+        from.server(),
+        from,
+        fingerprint
+    ))
+    .await
+    {
         Ok(r) => r,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
     let user = match r.text().await {
-        Ok(u) => {
-            u
-        },
+        Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
@@ -624,33 +830,53 @@ async fn fed_snuggle(fingerprint: Uuid, snuggled: &str, from: &str) -> Result {
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 
-    let user: User = User::new(user.username.parse().unwrap(), None, user.status.into(), SnuggleLog::default(), user.website, user.social, user.bio);
+    let user: User = User::new(
+        user.username.parse().unwrap(),
+        None,
+        user.status.into(),
+        SnuggleLog::default(),
+        user.website,
+        user.social,
+        user.bio,
+    );
 
     let mut db = DATABASE.lock().unwrap();
 
-    if let Err(e) =  db .add_user(user) {
-            error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+    if let Err(e) = db.add_user(user) {
+        error!("{}", e);
+        return (
+            http::Status::new(500),
+            jobject::Error(e.to_string()).to_string(),
+        );
     }
 
     let snuggled: jobject::User = match db.get_user(&snuggled) {
         Ok(s) => s,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
-    }.into();
-
+    }
+    .into();
 
     match serde_json::to_string(&snuggled) {
         Ok(s) => (http::Status::new(200), s),
         Err(e) => {
             error!("{}", e);
-            (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+            (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            )
         }
     }
 }

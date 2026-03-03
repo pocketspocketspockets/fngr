@@ -160,11 +160,7 @@ impl Database {
         Ok(user.status().clone())
     }
 
-    pub fn set_user_status_message(
-        &mut self,
-        username: &Username,
-        status: &str,
-    ) -> Result<()> {
+    pub fn set_user_status_message(&mut self, username: &Username, status: &str) -> Result<()> {
         self.0.execute(
             "UPDATE user SET message = ?1 WHERE username = ?2",
             (status, username),
@@ -200,11 +196,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn set_user_website(
-        &mut self,
-        username: &Username,
-        website: Option<&str>,
-    ) -> Result<()> {
+    pub fn set_user_website(&mut self, username: &Username, website: Option<&str>) -> Result<()> {
         self.0.execute(
             "UPDATE user SET website = ?1 WHERE username = ?2",
             (website, username),
@@ -212,11 +204,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn set_user_bio(
-        &mut self,
-        username: &Username,
-        bio: Option<&str>,
-    ) -> Result<()> {
+    pub fn set_user_bio(&mut self, username: &Username, bio: Option<&str>) -> Result<()> {
         self.0.execute(
             "UPDATE user SET bio = ?1 WHERE username = ?2",
             (bio, username),
@@ -242,7 +230,10 @@ impl Database {
         let mut log: SnuggleLog = user.log().clone();
         log.0.push(by.clone());
 
-        self.0.execute("UPDATE user SET log = ?1 WHERE username = ?2", (log, username))?;
+        self.0.execute(
+            "UPDATE user SET log = ?1 WHERE username = ?2",
+            (log, username),
+        )?;
         Ok(())
     }
 
@@ -251,25 +242,20 @@ impl Database {
         let log: SnuggleLog = user.log().clone();
         let new = SnuggleLog::default();
 
-        self.0.execute("UPDATE user SET log = ?1 WHERE username = ?2", (new, username))?;
+        self.0.execute(
+            "UPDATE user SET log = ?1 WHERE username = ?2",
+            (new, username),
+        )?;
         Ok(log)
     }
 
-    pub fn add_user_social(
-        &mut self,
-        username: &Username,
-        social: (&str, &str),
-    ) -> Result<()> {
+    pub fn add_user_social(&mut self, username: &Username, social: (&str, &str)) -> Result<()> {
         let mut socials = self.get_user_social(&username)?;
         socials.0.insert(social.0.to_owned(), social.1.to_owned());
         self.set_user_social(&username, socials)
     }
 
-    pub fn remove_user_social(
-        &mut self,
-        username: &Username,
-        social: &str,
-    ) -> Result<()> {
+    pub fn remove_user_social(&mut self, username: &Username, social: &str) -> Result<()> {
         let mut socials = self.get_user_social(&username)?;
         socials.0.remove(social);
         self.set_user_social(&username, socials)
@@ -284,7 +270,10 @@ impl Database {
                 Err(anyhow!("incorrect passphrase"))
             }
         } else {
-            Err(anyhow!("you must login to your own server: '{}'", username.server()))
+            Err(anyhow!(
+                "you must login to your own server: '{}'",
+                username.server()
+            ))
         }
     }
 }

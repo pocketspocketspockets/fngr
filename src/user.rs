@@ -1,17 +1,11 @@
-use crate::{
-    jobject::{self, SnuggleLog, SocialsList},
-};
+use crate::jobject::{self, SnuggleLog, SocialsList};
 use rocket::request::FromParam;
 use rusqlite::{
     ToSql,
     types::{FromSql, FromSqlError, Value},
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    error::Error,
-    fmt::Display,
-    str::FromStr,
-};
+use std::{error::Error, fmt::Display, str::FromStr};
 use time::UtcDateTime;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,9 +60,15 @@ impl FromStr for Username {
                 info: "failed to split server from string",
                 username: s.to_owned(),
             })?;
-            Ok(Self {username: username.to_owned(), server: server.to_owned() })
+            Ok(Self {
+                username: username.to_owned(),
+                server: server.to_owned(),
+            })
         } else {
-            Err(UsernameParseError { username: s.to_owned(), info: "unable to parse username" })
+            Err(UsernameParseError {
+                username: s.to_owned(),
+                info: "unable to parse username",
+            })
         }
     }
 }

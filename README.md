@@ -11,12 +11,7 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
 - [x] info
 - [x] login
 - [x] logoff
-- [ ] snuggle
-    - [x] response with proper input
-    - [x] local username
-    - [x] log
-    - [ ] federation
-    - [x] error handling
+- [x] snuggle
 - [x] check
 - [x] bump
 - [x] list

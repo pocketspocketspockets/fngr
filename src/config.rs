@@ -1,10 +1,6 @@
 use crate::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{
-    fs::File,
-    io::Read,
-    path::PathBuf,
-};
+use std::{fs::File, io::Read, path::PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct Config {
