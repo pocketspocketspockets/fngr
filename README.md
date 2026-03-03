@@ -17,13 +17,14 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
     - [x] log
     - [ ] federation
     - [x] error handling
-- [ ] check
+- [x] check
 - [ ] bump
 - [x] list
 - [ ] register
     - [x] response with proper input
     - [x] checks username
     - [x] creates the user
+    - [ ] server registration key
     - [ ] prevent '@' in provided username
     - [ ] error handling
 - [ ] deregister

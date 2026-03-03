@@ -219,7 +219,45 @@ async fn snuggle(
 
 #[get("/check?<username>&<auth>")]
 async fn check(username: &str, auth: Option<&str>, hauth: Option<Authorization>) -> Result {
-    unimplemented!()
+    let auth = match auth_filter(auth, hauth) {
+        Ok(a) => a,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let username: Username = match username.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let mut db = DATABASE.lock().unwrap();
+    if let Err(e) = db.authorize(&username, auth.to_string()) {
+        error!("{}", e);
+        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+    }
+
+    let log = match db.reset_log(&username) {
+        Ok(l) => l,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let log = match serde_json::to_string(&log) {
+        Ok(l) => l,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    (http::Status::new(200), log)
 }
 
 #[get("/bump?<username>&<auth>")]
