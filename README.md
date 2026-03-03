@@ -9,13 +9,24 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
 ## Features
 
 - [x] info
-- [x] login: needs: error handling
+- [ ] login
+    - [x] response with proper input
+    - [ ] error handling
 - [ ] logoff
-- [x] snuggle: needs: local username, add log, add federation, add error handling
+- [ ] snuggle
+    - [x] basic response with proper input
+    - [ ] local username
+    - [ ] log
+    - [ ] federation
+    - [ ] error handling
 - [ ] check
 - [ ] bump
 - [x] list
-- [x] register: needs: error handling
+- [ ] register
+    - [x] response with proper input
+    - [x] checks username
+    - [x] creates the user
+    - [ ] error handling
 - [ ] deregister
 - [ ] setbio
 - [ ] addsocial
@@ -23,7 +34,15 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
 - [ ] setweb
 - [ ] fed
 - [ ] fed/fingerprint
-- [x] profiles (website, socials, bio)
+- [x] profiles
+    - [x] website
+    - [x] social media list
+    - [x] bio
+- [x] status
+    - [x] state
+    - [x] message
+    - [x] bump
+- [ ] offline worker
 
 !!! all need documentation for 1.0 !!!
 
