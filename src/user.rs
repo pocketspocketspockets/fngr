@@ -1,5 +1,4 @@
 use crate::jobject::{self, SnuggleLog, SocialsList};
-use rocket::request::FromParam;
 use rusqlite::{
     ToSql,
     types::{FromSql, FromSqlError, Value},

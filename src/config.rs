@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 use std::{fs::File, io::Read, path::PathBuf};
+use tracing::warn;
 
 #[derive(Debug, Clone)]
 pub struct Config {

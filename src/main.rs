@@ -7,7 +7,7 @@ use crate::user::Username;
 use crate::{authorization::Authorization, config::Config, database::Database, user::User};
 use lazy_static::lazy_static;
 use rocket::{catch, catchers};
-use rocket::{get, http, post, routes, serde::uuid::Uuid};
+use rocket::{get, http, routes, serde::uuid::Uuid};
 use sha_rs::Sha;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
@@ -21,7 +21,6 @@ mod database;
 mod jobject;
 mod prelude;
 mod user;
-// mod error;
 
 type Result = (http::Status, String);
 
@@ -490,13 +489,19 @@ async fn register(username: &str, password: &str, key: Option<&str>) -> Result {
     let config = CONFIG.lock().unwrap();
 
     if !config.registration {
-        return (http::Status::Forbidden, jobject::Error("registration is disabled".to_owned()).to_string());
+        return (
+            http::Status::Forbidden,
+            jobject::Error("registration is disabled".to_owned()).to_string(),
+        );
     }
 
     if let Some(key) = key {
         if let Some(ck) = &config.auth_key {
             if key != ck {
-                return (http::Status::Forbidden, jobject::Error("invalid registration key".to_owned()).to_string());
+                return (
+                    http::Status::Forbidden,
+                    jobject::Error("invalid registration key".to_owned()).to_string(),
+                );
             }
         }
     }
@@ -875,7 +880,10 @@ async fn fed_snuggle(fingerprint: Uuid, snuggled: &str, from: &str) -> Result {
         Ok(u) => u,
         Err(e) => {
             error!("{}", e);
-            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
         }
     };
 

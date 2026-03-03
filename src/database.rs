@@ -1,7 +1,7 @@
 use crate::{
     jobject::{self, SnuggleLog},
     prelude::*,
-    user::{Status, User, Username},
+    user::{User, Username},
 };
 use rusqlite::Connection;
 use std::path::Path;
@@ -52,7 +52,7 @@ impl Database {
     }
 
     pub fn get_user(&mut self, username: &Username) -> Result<User> {
-        let mut map = self.0.prepare("SELECT username, hash, online, message, since, bumped, log, website, social, bio FROM user WHERE hash IS NOT NULL")?;
+        let mut map = self.0.prepare("SELECT username, hash, online, message, since, bumped, log, website, social, bio FROM user")?;
         let mut person = map.query_map([], |row| {
             let name: Username = row.get("username")?;
             if *username == name {
@@ -78,10 +78,8 @@ impl Database {
         let person = person.next();
         match person {
             Some(Ok(p)) => Ok(p),
-            Some(Err(e)) => {
-                Err(anyhow!(e.to_string()))
-            },
-            None => Err(anyhow!("user {} does not exist", username))
+            Some(Err(e)) => Err(anyhow!(e.to_string())),
+            None => Err(anyhow!("user {} does not exist", username)),
         }
     }
 
@@ -116,36 +114,36 @@ impl Database {
         Ok(new_map)
     }
 
-    pub fn get_external_users(&mut self) -> Result<Vec<User>> {
-        let mut map = self.0.prepare("SELECT username, hash, online, message, since, bumped, log, website, social, bio FROM user WHERE hash IS NULL")?;
-        let users = map.query_map([], |row| {
-            let status = jobject::Status {
-                online: row.get("online")?,
-                text: row.get("message")?,
-                bump: row.get("bumped")?,
-                since: row.get("since")?,
-            };
-            Ok(User::new(
-                row.get("username")?,
-                row.get("hash")?,
-                status.into(),
-                row.get("log")?,
-                row.get("website")?,
-                row.get("social")?,
-                row.get("bio")?,
-            ))
-        })?;
+    // pub fn get_external_users(&mut self) -> Result<Vec<User>> {
+    //     let mut map = self.0.prepare("SELECT username, hash, online, message, since, bumped, log, website, social, bio FROM user WHERE hash IS NULL")?;
+    //     let users = map.query_map([], |row| {
+    //         let status = jobject::Status {
+    //             online: row.get("online")?,
+    //             text: row.get("message")?,
+    //             bump: row.get("bumped")?,
+    //             since: row.get("since")?,
+    //         };
+    //         Ok(User::new(
+    //             row.get("username")?,
+    //             row.get("hash")?,
+    //             status.into(),
+    //             row.get("log")?,
+    //             row.get("website")?,
+    //             row.get("social")?,
+    //             row.get("bio")?,
+    //         ))
+    //     })?;
 
-        let mut new_map: Vec<User> = Vec::new();
+    //     let mut new_map: Vec<User> = Vec::new();
 
-        for user in users {
-            if let Ok(user) = user {
-                new_map.push(user)
-            }
-        }
+    //     for user in users {
+    //         if let Ok(user) = user {
+    //             new_map.push(user)
+    //         }
+    //     }
 
-        Ok(new_map)
-    }
+    //     Ok(new_map)
+    // }
 
     pub fn count(&mut self) -> Result<[usize; 2]> {
         let users = self.get_internal_users()?;
@@ -161,10 +159,10 @@ impl Database {
         Ok([online, total])
     }
 
-    pub fn get_status(&mut self, username: &Username) -> Result<Status> {
-        let user = self.get_user(&username)?;
-        Ok(user.status().clone())
-    }
+    // pub fn get_status(&mut self, username: &Username) -> Result<Status> {
+    //     let user = self.get_user(&username)?;
+    //     Ok(user.status().clone())
+    // }
 
     pub fn set_user_status_message(&mut self, username: &Username, status: &str) -> Result<()> {
         self.0.execute(
