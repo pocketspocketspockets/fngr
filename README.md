@@ -27,7 +27,7 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
     - [ ] server registration key
     - [ ] prevent '@' in provided username
     - [ ] error handling
-- [ ] deregister
+- [x] deregister
 - [ ] setbio
 - [ ] addsocial
 - [ ] delsocial

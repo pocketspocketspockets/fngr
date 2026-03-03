@@ -383,7 +383,35 @@ async fn register(username: &str, password: &str) -> Result {
 
 #[get("/deregister?<username>&<auth>")]
 async fn deregister(username: &str, auth: Option<&str>, hauth: Option<Authorization>) -> Result {
-    unimplemented!()
+    let auth = match auth_filter(auth, hauth) {
+        Ok(a) => a,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::Unauthorized, jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let username: Username = match username.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let mut db = DATABASE.lock().unwrap();
+    if let Err(e) = db.authorize(&username, auth.to_string()) {
+        error!("{}", e);
+        return (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+    }
+
+    match db.delete_user(&username) {
+        Ok(_) => (http::Status::new(200), "\"Ok\": \"you are deregistered\" }".to_owned()),
+        Err(e) => {
+            error!("{}", e);
+            (http::Status::new(401), jobject::Error(e.to_string()).to_string())
+        }
+    }
 }
 
 #[get("/setbio?<username>&<auth>&<bio>")]

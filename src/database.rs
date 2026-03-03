@@ -47,7 +47,7 @@ impl Database {
 
     pub fn delete_user(&mut self, user: &Username) -> Result<()> {
         self.0
-            .execute("DELETE FROM user WHERE (username) VALUES (?1)", (user,))?;
+            .execute("DELETE FROM user WHERE username = ?1", (user,))?;
         Ok(())
     }
 
