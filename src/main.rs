@@ -2,6 +2,7 @@
 #![forbid(clippy::expect_used)]
 #![forbid(unsafe_code)]
 
+use crate::jobject::SnuggleLog;
 use crate::user::Username;
 use crate::{authorization::Authorization, config::Config, database::Database, user::User};
 use lazy_static::lazy_static;
@@ -583,9 +584,75 @@ async fn website(
     }
 }
 
-#[post("/<fingerprint>/<snuggled>/<from>")]
+#[get("/<fingerprint>/<snuggled>/<from>")]
 async fn fed_snuggle(fingerprint: Uuid, snuggled: &str, from: &str) -> Result {
-    unimplemented!()
+    let snuggled: Username = match snuggled.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let from: Username = match from.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    };
+
+    let r = match reqwest::get(format!("https://{}/fed/fingerprint/{}/{}", from.server(), from, fingerprint)).await {
+        Ok(r) => r,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+        }
+    };
+
+    let user = match r.text().await {
+        Ok(u) => {
+            u
+        },
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+        }
+    };
+
+    let user: jobject::User = match serde_json::from_str(&user) {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+        }
+    };
+
+    let user: User = User::new(user.username.parse().unwrap(), None, user.status.into(), SnuggleLog::default(), user.website, user.social, user.bio);
+
+    let mut db = DATABASE.lock().unwrap();
+
+    if let Err(e) =  db .add_user(user) {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+    }
+
+    let snuggled: jobject::User = match db.get_user(&snuggled) {
+        Ok(s) => s,
+        Err(e) => {
+            error!("{}", e);
+            return (http::Status::new(500), jobject::Error(e.to_string()).to_string());
+        }
+    }.into();
+
+
+    match serde_json::to_string(&snuggled) {
+        Ok(s) => (http::Status::new(200), s),
+        Err(e) => {
+            error!("{}", e);
+            (http::Status::new(500), jobject::Error(e.to_string()).to_string())
+        }
+    }
 }
 
 #[get("/fingerprint/<user>/<fingerprint>")]
