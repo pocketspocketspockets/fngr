@@ -187,6 +187,19 @@ impl Database {
         Ok(())
     }
 
+    pub fn set_user_status_bump(
+        &mut self,
+        username: &Username,
+        bump: Option<UtcDateTime>,
+    ) -> Result<()> {
+        self.0.execute(
+            "UPDATE user SET bumped = ?1, bumped = NULL WHERE username = ?2",
+            (bump.map(|i| i.unix_timestamp()), username),
+        )?;
+
+        Ok(())
+    }
+
     pub fn set_user_website(
         &mut self,
         username: &Username,

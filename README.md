@@ -18,7 +18,7 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
     - [ ] federation
     - [x] error handling
 - [x] check
-- [ ] bump
+- [x] bump
 - [x] list
 - [ ] register
     - [x] response with proper input
