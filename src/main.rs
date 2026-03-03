@@ -6,14 +6,17 @@ use crate::jobject::SnuggleLog;
 use crate::user::Username;
 use crate::{authorization::Authorization, config::Config, database::Database, user::User};
 use lazy_static::lazy_static;
+use rocket::tokio::time::sleep;
 use rocket::{catch, catchers};
 use rocket::{get, http, routes, serde::uuid::Uuid};
 use sha_rs::Sha;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
+use std::ops::Add;
 use std::sync::Mutex;
+use std::time::Duration;
 use time::UtcDateTime;
-use tracing::{error, warn};
+use tracing::{error, warn, info};
 
 mod authorization;
 mod config;
@@ -994,8 +997,33 @@ async fn edefault() -> String {
     jobject::Error("error".to_owned()).to_string()
 }
 
+async fn offline_worker() -> ! {
+    loop {
+        sleep(rocket::tokio::time::Duration::from_secs(60)).await;
+        info!("checking for offline users");
+        let mut db = DATABASE.lock().unwrap();
+        let now = UtcDateTime::now();
+        if let Ok(users) = db.get_internal_users() {
+            for user in users {
+                if now >= user.status().since.add(Duration::from_hours(1)) {
+                    if let Some(bump) = user.status().bumped {
+                        if now >= bump.add(Duration::from_hours(1)) {
+                            if let Err(e) =  db.set_user_status_state(user.username(), false, now) {
+                                error!("{}", e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[rocket::main]
 async fn main() {
+    // tracing_subscriber::fmt::init();
+    rocket::tokio::spawn(offline_worker());
+
     let address = CONFIG
         .lock()
         .unwrap()

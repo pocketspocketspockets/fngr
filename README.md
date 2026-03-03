@@ -31,7 +31,7 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
     - [x] state
     - [x] message
     - [x] bump
-- [ ] offline worker
+- [x] offline worker
 
 !!! all need documentation for 1.0 !!!
 

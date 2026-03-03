@@ -180,7 +180,7 @@ impl Database {
         since: UtcDateTime,
     ) -> Result<()> {
         self.0.execute(
-            "UPDATE user SET status = ?1, since = ?2, bumped = NULL WHERE username = ?3",
+            "UPDATE user SET online = ?1, since = ?2, bumped = NULL WHERE username = ?3",
             (status, since.unix_timestamp(), username),
         )?;
 
@@ -193,7 +193,7 @@ impl Database {
         bump: Option<UtcDateTime>,
     ) -> Result<()> {
         self.0.execute(
-            "UPDATE user SET bumped = ?1, bumped = NULL WHERE username = ?2",
+            "UPDATE user SET bumped = ?1 WHERE username = ?2",
             (bump.map(|i| i.unix_timestamp()), username),
         )?;
 
