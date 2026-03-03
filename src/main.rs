@@ -997,6 +997,8 @@ async fn edefault() -> String {
     jobject::Error("error".to_owned()).to_string()
 }
 
+
+// this function is . I hate databases
 async fn offline_worker() -> ! {
     loop {
         sleep(rocket::tokio::time::Duration::from_secs(60)).await;
@@ -1012,6 +1014,10 @@ async fn offline_worker() -> ! {
                                 error!("{}", e);
                             }
                         }
+                    } else {
+                        if let Err(e) =  db.set_user_status_state(user.username(), false, now) {
+                                error!("{}", e);
+                            }
                     }
                 }
             }
