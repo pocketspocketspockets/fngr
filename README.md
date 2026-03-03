@@ -13,7 +13,7 @@ there is a lot here changing for 0.4a, including stable 1.0 API version. This RE
 - [x] logoff
 - [ ] snuggle
     - [x] response with proper input
-    - [ ] local username
+    - [x] local username
     - [x] log
     - [ ] federation
     - [x] error handling

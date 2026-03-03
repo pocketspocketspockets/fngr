@@ -184,6 +184,18 @@ async fn snuggle(
         }
     };
 
+    let username = if !username.contains("@") {
+        format!("{}@{}", username, CONFIG.lock().unwrap().server_name)
+    } else {
+        username.to_owned()
+    };
+
+    let user = if !user.contains("@") {
+        format!("{}@{}", user, CONFIG.lock().unwrap().server_name)
+    } else {
+        user.to_owned()
+    };
+
     let by_user: Username = match username.parse() {
         Ok(u) => u,
         Err(e) => {
@@ -199,6 +211,10 @@ async fn snuggle(
             return (http::Status::new(500), jobject::Error(e.to_string()).to_string())
         }
     };
+
+    if to_user.server() != CONFIG.lock().unwrap().server_name {
+        unimplemented!("federation");
+    }
 
     let mut db = DATABASE.lock().unwrap();
     if let Err(e) = db.authorize(&by_user, auth.to_string()) {
