@@ -905,7 +905,55 @@ async fn fed_snuggle(fingerprint: Uuid, snuggled: &str, from: &str) -> Result {
 
 #[get("/fingerprint/<user>/<fingerprint>")]
 async fn fingerprint(user: &str, fingerprint: Uuid) -> Result {
-    unimplemented!()
+    let snuggler: Username = match user.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            error!("{}", e);
+            return (
+                http::Status::new(500),
+                jobject::Error(e.to_string()).to_string(),
+            );
+        }
+    };
+
+    if let Some(uuid) = FEDERATION.lock().unwrap().remove(&snuggler.to_string()) {
+        if fingerprint == uuid {
+            let mut db = DATABASE.lock().unwrap();
+
+            let snuggler: jobject::User = match db.get_user(&snuggler) {
+                Ok(s) => s,
+                Err(e) => {
+                    error!("{}", e);
+                    return (
+                        http::Status::new(500),
+                        jobject::Error(e.to_string()).to_string(),
+                    );
+                }
+            }
+            .into();
+
+            match serde_json::to_string(&snuggler) {
+                Ok(s) => (http::Status::new(200), s),
+                Err(e) => {
+                    error!("{}", e);
+                    (
+                        http::Status::new(500),
+                        jobject::Error(e.to_string()).to_string(),
+                    )
+                }
+            }
+        } else {
+            (
+                http::Status::new(404),
+                jobject::Error("invalid fingerprint".to_owned()).to_string(),
+            )
+        }
+    } else {
+        (
+            http::Status::new(404),
+            jobject::Error("fingerprint not found".to_owned()).to_string(),
+        )
+    }
 }
 
 #[catch(500)]
