@@ -1,6 +1,39 @@
 # Snuggle
 
-Simple federated social media inspired by finger
+Simple federated social media inspired by finger. Snuggling lets you see a user's profile, and they get to see yours.
+
+## Info
+
+there is a lot here changing for 0.4a, including stable 1.0 API version. This README is not up to date after the feature list.
+
+## Features
+
+- [x] info
+- [x] login
+- [x] logoff
+- [x] snuggle
+- [x] check
+- [x] bump
+- [x] list
+- [x] register
+- [x] deregister
+- [x] setbio
+- [x] addsocial
+- [x] delsocial
+- [x] setweb
+- [x] fed
+- [x] fed/fingerprint
+- [x] profiles
+    - [x] website
+    - [x] social media list
+    - [x] bio
+- [x] status
+    - [x] state
+    - [x] message
+    - [x] bump
+- [x] offline worker
+
+!!! all need documentation for 1.0 !!!
 
  ## Endpoints
 
@@ -20,8 +53,8 @@ Simple federated social media inspired by finger
  - `/setweb`
 
  server to server endpoints
- - `/fed_snuggle`
- - `/fingerprint`
+ - `/fed`
+ - `/fed/fingerprint`
 
  ## Response
 
