@@ -1,3 +1,6 @@
+moved to codeberg: https://codeberg.org/pockets/snuggle
+
+
 # Snuggle
 
 Simple federated social media inspired by finger. Snuggling lets you see a user's profile, and they get to see yours.
